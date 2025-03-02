@@ -1,11 +1,11 @@
 import subprocess
 import os
+##########
+import executor
+import dom
 
 def list_installed_apps():
-    # """Generate a list of 20 prompts I should try for my AI agent based on the currently installed apps on my mac.
-    # Format should be APPNAME - "PROMPT", eg. Spotify - "Play some songs by Led Zepplin".
-    # Apps:"""
-    app_info = []
+    app_info = [] # """Generate a list of 20 prompts I should try for my AI agent based on the currently installed apps on my mac.\nFormat should be APPNAME - "PROMPT", eg. Spotify - "Play some songs by Led Zepplin".\n\nApps:"""
     for directory in ['/Applications', os.path.expanduser('~/Applications'), '/System/Applications']:
         if os.path.exists(directory):
             for item in os.listdir(directory):
@@ -30,4 +30,10 @@ def list_installed_apps():
     return "\n".join(f"- {' | '.join(app[:2])}" for app in sorted(app_info))
 
 if __name__ == "__main__":
-    print(list_installed_apps())
+    executor = executor.Executor()
+    executor.open_app("com.apple.Safari")
+    executor.execute_command("cmd+o")
+    
+    # print("Clicking element 1..."); executor.click_element(1)
+    # print("Typing text into element 2..."); executor.type_text(2, "Hello, World!")
+    # print(list_installed_apps())
