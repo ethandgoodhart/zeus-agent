@@ -65,16 +65,37 @@ def get_actions_from_llm(prompt):
         "systemInstruction": {
             "parts": [
                 {"text": """
-                You are Flow, an expert automation agent specializing in macOS application control and automation. Your purpose is to generate precise, efficient action sequences that help users interact with macOS applications through accessibility controls and keyboard commands.
-                
-                If previous actions is empty, the first and only action should be to open the best app to complete the task in (eg. Spotify to play music, or Messages to send a text):
-                {
-                    "actions": [
-                        {"open_app": {"bundle_id": "app_to_open_bundle_id"}}
-                    ] //no more actions after
-                }
+                You are Flow, an expert automation agent for macOS with deep knowledge of all native and popular third-party applications. Your goal is to complete user tasks with minimal, precise actions using accessibility controls and keyboard commands.
 
-                After opening the app, generate actions to successfully complete the task.
+                GUIDELINES:
+                - Always analyze the current state before deciding actions
+                - Choose the most direct path to complete tasks
+                - Prefer keyboard shortcuts over clicking when efficient
+                - Break complex tasks into logical sequences
+                - Wait appropriate times between actions that need processing
+
+                WORKFLOW:
+                1. If no previous actions exist, your ONLY response should be to open the most appropriate app:
+                   {
+                     "actions": [
+                       {"open_app": {"bundle_id": "com.appropriate.app"}}
+                     ]
+                   }
+
+                2. After app is open, observe the interface and plan your approach
+                3. Execute precise action sequences to complete the task
+                4. Verify completion before calling finish()
+
+                COMMON BUNDLE IDs:
+                - Safari: "com.apple.Safari"
+                - Messages: "com.apple.MobileSMS"
+                - Mail: "com.apple.mail"
+                - YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C"
+                - Calendar: "com.apple.iCal"
+                - Notes: "com.apple.Notes"
+                - Chrome: "com.google.Chrome"
+
+                Remember: Efficiency and precision are key. Use the minimum actions needed to complete the task successfully.
                 """}
             ]
         }
@@ -85,8 +106,10 @@ def get_actions_from_llm(prompt):
     candidates = data.get("candidates", [])
     text = candidates[0]["content"]["parts"][0]["text"] if candidates else ""
     
-    # Clean response if needed
-    text = text.replace("```json", "").replace("```", "")
+    # Clean response
+    if "```json" in text:
+        text = text.split("```json", 1)[1]
+    text = text.replace("```", "").strip()
     
     action_json = json.loads(text)
     actions = action_json.get("actions", [])
@@ -122,14 +145,6 @@ def execute_actions(past_actions, actions):
             updated_actions.append("Task completed")
     
     return [task_completed, updated_actions]
-
-# # executor.get_dom_str()
-# execute_actions([], [{'open_app': {'bundle_id': 'com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C'}}])
-# execute_actions([], [{'click_element': {'id': 4}}, {'type': {'text': 'drake'}}])
-# execute_actions([], [{'hotkey': {'keys': ['enter']}}])
-# execute_actions([], [{'pause': {'seconds': 1}}])
-# execute_actions([], [{'hotkey': {'keys': ['space']}}])
-
 def get_initial_dom_str():
     dom_str = "### Active app: None (None)\n"
     try:
@@ -144,18 +159,25 @@ def get_initial_dom_str():
     except Exception as e:
         print(f"Error getting app list: {e}")
     return dom_str
+initial = get_initial_dom_str()
 
-while True:
+def run(task, debug=False):
+    max_iterations = 6
     is_task_complete = False
     past_actions = []
-    dom_str = get_initial_dom_str()
-    user_input = input("✈️ Enter command: "); print("---------------")
+    dom_str = initial
 
-    while not is_task_complete:
-        prompt = generate_prompt(dom_str, past_actions, user_input)
+    for _ in range(max_iterations):
+        prompt = generate_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
-        print("prompt: ", prompt.replace("\n", "\\n"))
+        if debug:
+            print("json_actions = ", actions, "\n")
+            print("prompt: ", prompt.replace("\n", "\\n"))
         is_task_complete, past_actions = execute_actions(past_actions, actions)
+        if is_task_complete: break
         dom_str = executor.get_dom_str()
 
+while True:
+    user_input = input("✈️ Enter command: "); print("---------------")
+    run(user_input, debug=False)
     print("Task completed successfully\n")

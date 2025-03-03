@@ -7,26 +7,36 @@ public let workspace = NSWorkspace.shared
 
 public func getCurrentDom() -> [Int: AXUIElement] {
     var currentDom: [Int: AXUIElement] = [:]
+    let maxElements = 400
     
     guard let activeApp = workspace.frontmostApplication else { return [:] }
     let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
     
     func addElementToDOM(_ element: AXUIElement, depth: Int = 0, nextId: inout Int) {
+        // Skip menu items
+        var roleValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
+        let role = roleValue as? String ?? ""
+        if role == "AXMenuItem" { return }
+        
         // Check if element is clickable before adding to DOM
         var actionsArray: CFArray?
         let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success &&
             (actionsArray as? [String])?.contains(kAXPressAction) == true
         
-        if isClickable {
+        if isClickable && currentDom.count < maxElements {
             currentDom[nextId] = element
             nextId += 1
         }
+        
+        if currentDom.count >= maxElements { return }
         
         var children: AnyObject?
         let result = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
         
         if result == .success, let childElements = children as? [AXUIElement] {
             for child in childElements {
+                if currentDom.count >= maxElements { break }
                 addElementToDOM(child, depth: depth + 1, nextId: &nextId)
             }
         }

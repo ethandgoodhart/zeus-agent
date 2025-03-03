@@ -12,7 +12,7 @@ private func openApplication(bundleId: String) throws {
     workspace.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
     print("✅ opened application: \(bundleId)")
     Thread.sleep(forTimeInterval: 0.5)
-    print("NEW focused app: \(workspace.frontmostApplication?.bundleIdentifier ?? "Unknown")")
+    // print("NEW focused app: \(workspace.frontmostApplication?.bundleIdentifier ?? "Unknown")")
     dom = getCurrentDom()
 }
 
@@ -43,7 +43,6 @@ private func clickElement(id: Int) throws {
 @_cdecl("get_dom_str") // refreshes DOM, returns it as a String
 public func get_dom_str() -> UnsafeMutablePointer<CChar> {
     dom = getCurrentDom()
-    print("DOM | refreshed successfully")
     let domString = getCurrentAppContext()
     let cString = strdup(domString)
     return cString!
