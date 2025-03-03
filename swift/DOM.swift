@@ -8,7 +8,41 @@ private let workspace = NSWorkspace.shared
 private var currentApplicationBundleId: String?
 private var currentDom: [Int: AXUIElement] = [:]
 
-// MARK: - Private Methods - Context & DOM
+public func getCurrentDom() -> [Int: AXUIElement] {
+    guard let activeApp = workspace.frontmostApplication else { return [:] }
+    currentApplicationBundleId = activeApp.bundleIdentifier
+    let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
+    
+    // Clear the current DOM before rebuilding
+    currentDom.removeAll()
+    
+    func addElementToDOM(_ element: AXUIElement, depth: Int = 0, nextId: inout Int) {
+        // Check if element is clickable before adding to DOM
+        var actionsArray: CFArray?
+        let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success &&
+            (actionsArray as? [String])?.contains(kAXPressAction) == true
+        
+        if isClickable {
+            currentDom[nextId] = element
+            nextId += 1
+        }
+        
+        var children: AnyObject?
+        let result = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+        
+        if result == .success, let childElements = children as? [AXUIElement] {
+            for child in childElements {
+                addElementToDOM(child, depth: depth + 1, nextId: &nextId)
+            }
+        }
+    }
+    
+    var nextId = 1
+    addElementToDOM(appRef, nextId: &nextId)
+    
+    return currentDom
+}
+
 public func getCurrentAppContext() -> String {
     var context = ""
     
@@ -18,12 +52,12 @@ public func getCurrentAppContext() -> String {
     // Only get DOM if not our own app
     if currentApplicationBundleId != "dev.ethan.flow" {
         context += "#### MacOS app elements:\n"
-        getCurrentDom()
         
         for (id, element) in currentDom.sorted(by: { $0.key < $1.key }) {
             var roleValue: AnyObject?
             AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
             let role = roleValue as? String ?? ""
+            
             var titleValue: AnyObject?
             AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
             let title = titleValue as? String ?? ""
@@ -74,35 +108,4 @@ public func getCurrentAppContext() -> String {
     }
 
     return context
-}
-
-public func getCurrentDom() {
-    currentDom.removeAll()
-    
-    guard let activeApp = workspace.frontmostApplication else { return }
-    let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
-    
-    func addElementToDOM(_ element: AXUIElement, depth: Int = 0, nextId: inout Int) {
-        // Check if element is clickable before adding to DOM
-        var actionsArray: CFArray?
-        let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success &&
-            (actionsArray as? [String])?.contains(kAXPressAction) == true
-        
-        if isClickable {
-            currentDom[nextId] = element
-            nextId += 1
-        }
-        
-        var children: AnyObject?
-        let result = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
-        
-        if result == .success, let childElements = children as? [AXUIElement] {
-            for child in childElements {
-                addElementToDOM(child, depth: depth + 1, nextId: &nextId)
-            }
-        }
-    }
-    
-    var nextId = 1
-    addElementToDOM(appRef, nextId: &nextId)
 }

@@ -136,4 +136,4 @@ while True:
         execute_actions(actions)
         dom_str = executor.get_dom_str()
 
-    print("✅ Task completed successfully")
+    print("Task completed successfully\n")

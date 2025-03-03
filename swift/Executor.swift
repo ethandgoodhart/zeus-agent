@@ -5,21 +5,21 @@ import CoreGraphics
 // Global variables for state management
 private let workspace = NSWorkspace.shared
 private var currentApplicationBundleId: String?
-private var currentDom: [Int: AXUIElement] = [:]
+private var dom: [Int: AXUIElement] = [:]
 
 private func openApplication(bundleId: String) throws {
-    guard workspace.launchApplication(withBundleIdentifier: bundleId, options: [], additionalEventParamDescriptor: nil, launchIdentifier: nil) else {
-        throw NSError(domain: "Executor", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to open application: \(bundleId)"])
+    guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
+        throw NSError(domain: "Executor", code: 2, userInfo: [NSLocalizedDescriptionKey: "Application not found: \(bundleId)"])
     }
+    
+    NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
     currentApplicationBundleId = bundleId
     print("✅ opened application: \(bundleId)")
-
-    // Wait for app to launch and update DOM
     Thread.sleep(forTimeInterval: 0.5)
 }
 
 private func clickElement(id: Int) throws {
-    guard let element = currentDom[id] else {
+    guard let element = dom[id] else {
         throw NSError(domain: "Executor", code: 3, userInfo: [NSLocalizedDescriptionKey: "Element not found: \(id)"])
     }
 
@@ -32,19 +32,20 @@ private func clickElement(id: Int) throws {
     var roleValue: AnyObject?
     AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
     let role = roleValue as? String ?? ""
-    
     var titleValue: AnyObject?
     AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
     let title = titleValue as? String ?? ""
     
     print("✅ clicked on element [\(id)]<\(role)>\(title)</\(role)>")
+
+    Thread.sleep(forTimeInterval: 0.5)
 }
 
 // MARK: - C Interface
 @_cdecl("get_dom_str") // refreshes DOM, returns it as a String
 public func get_dom_str() -> UnsafeMutablePointer<CChar> {
     if currentApplicationBundleId == nil { currentApplicationBundleId = workspace.frontmostApplication?.bundleIdentifier }
-    getCurrentDom()
+    dom = getCurrentDom()
     print("✅ DOM refreshed successfully")
     let domString = getCurrentAppContext()
     let cString = strdup(domString)

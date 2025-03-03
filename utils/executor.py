@@ -7,8 +7,15 @@ import time
 class Executor:
     def __init__(self):
         try:
-            subprocess.run(["swiftc", "-emit-library", "swift/Executor.swift", "swift/DOM.swift", "-o", "libexecutor.dylib"], check=True, capture_output=True)
+            # Compile the Swift code to a dynamic library
+            result = subprocess.run(["swiftc", "-emit-library", "swift/Executor.swift", "swift/DOM.swift", "-o", "libexecutor.dylib"], check=True)            
+            if result.returncode != 0:
+                print(f"Swift compilation error: {result.stderr}")
+                raise Exception(f"Swift compilation failed with code {result.returncode}")
+            # Code sign the library with entitlements
+            subprocess.run(["codesign", "-s", "-", "--entitlements", "swift/Executor.entitlements", "libexecutor.dylib"], check=True)
             self.lib = ctypes.CDLL("./libexecutor.dylib")
+
             self.lib.openApp.argtypes, self.lib.openApp.restype = [ctypes.c_char_p], ctypes.c_bool
             self.lib.clickElement.argtypes, self.lib.clickElement.restype = [ctypes.c_int32], ctypes.c_bool
             self.lib.get_dom_str.restype = ctypes.c_char_p
