@@ -1,6 +1,7 @@
 from dotenv import load_dotenv; load_dotenv()
 import utils.__applist__ as __applist__
 import utils.executor as executor
+import subprocess
 import requests
 import json
 import os
@@ -122,21 +123,39 @@ def execute_actions(past_actions, actions):
     
     return [task_completed, updated_actions]
 
-# print(executor.get_dom_str()[:150])
-execute_actions([], [{'open_app': {'bundle_id': 'com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C'}}])
-execute_actions([], [{'click_element': {'id': 4}}, {'type': {'text': 'drake'}}, {'hotkey': {'keys': ['enter']}}])
+# # executor.get_dom_str()
+# execute_actions([], [{'open_app': {'bundle_id': 'com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C'}}])
+# execute_actions([], [{'click_element': {'id': 4}}, {'type': {'text': 'drake'}}])
+# execute_actions([], [{'hotkey': {'keys': ['enter']}}])
+# execute_actions([], [{'pause': {'seconds': 1}}])
+# execute_actions([], [{'hotkey': {'keys': ['space']}}])
 
-# while True:
-#     is_task_complete = False
-#     past_actions = []
-#     dom_str = executor.get_dom_str()
-#     user_input = input("✈️ Enter command: "); print("---------------")
+def get_initial_dom_str():
+    dom_str = "### Active app: None (None)\n"
+    try:
+        app_list = subprocess.check_output(["osascript", "-e", 'tell application "System Events" to get name of every process whose background only is false']).decode().strip()
+        bundle_ids = subprocess.check_output(["osascript", "-e", 'tell application "System Events" to get bundle identifier of every process whose background only is false']).decode().strip()
+        app_names = app_list.split(", ")
+        app_bundle_ids = bundle_ids.split(", ")        
+        dom_str += "\n### Mac app bundleids:\n"
+        for app_name, bundle_id in zip(app_names, app_bundle_ids):
+            if bundle_id:
+                dom_str += f"{app_name}, {bundle_id}\n"
+    except Exception as e:
+        print(f"Error getting app list: {e}")
+    return dom_str
 
-#     while not is_task_complete:
-#         prompt = generate_prompt(dom_str, past_actions, user_input)
-#         actions = get_actions_from_llm(prompt)
-#         print("prompt: ", prompt[:150].replace("\n", "\\n"))
-#         is_task_complete, past_actions = execute_actions(past_actions, actions)
-#         dom_str = executor.get_dom_str()
+while True:
+    is_task_complete = False
+    past_actions = []
+    dom_str = get_initial_dom_str()
+    user_input = input("✈️ Enter command: "); print("---------------")
 
-#     print("Task completed successfully\n")
+    while not is_task_complete:
+        prompt = generate_prompt(dom_str, past_actions, user_input)
+        actions = get_actions_from_llm(prompt)
+        print("prompt: ", prompt.replace("\n", "\\n"))
+        is_task_complete, past_actions = execute_actions(past_actions, actions)
+        dom_str = executor.get_dom_str()
+
+    print("Task completed successfully\n")

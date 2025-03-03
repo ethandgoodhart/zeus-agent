@@ -21,28 +21,33 @@ class Executor:
             self.lib.get_dom_str.restype = ctypes.c_char_p
         except Exception as e: print(f"Failed to initialize Executor: {e}"); raise
     
+    # action 1
     def open_app(self, bundle_id: str) -> bool:
         return self.lib.openApp(bundle_id.encode('utf-8'))
+    # action 2
     def click_element(self, element_id: int) -> bool:
         return self.lib.clickElement(ctypes.c_int32(element_id))
+    # action 3
     def type(self, text: str) -> bool:
         pyautogui.write(text)
         print("✅ typed text:", text)
         return True
+    # action 4
     def hotkey(self, keys: List[str]) -> bool:
         pyautogui.hotkey(*keys)
         print("✅ pressed keys:", keys)
         return True
-    
+    # action 5
     def wait(self, seconds: float) -> bool:
         time.sleep(seconds)
         print(f"✅ waited {seconds} sec")
         return True
+    
+
     def get_dom_str(self) -> str:
         result = self.lib.get_dom_str()
         dom_str = result.decode('utf-8') if result else ""
         return dom_str
-    
     def __del__(self): 
         try:
             if os.path.exists("libexecutor.dylib"): os.remove("libexecutor.dylib")

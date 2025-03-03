@@ -3,16 +3,16 @@ import AppKit
 import CoreGraphics
 
 // Global variables for state management
-private let workspace = NSWorkspace.shared
 private var dom: [Int: AXUIElement] = [:]
 
 private func openApplication(bundleId: String) throws {
-    guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
+    guard let appURL = workspace.urlForApplication(withBundleIdentifier: bundleId) else {
         throw NSError(domain: "Executor", code: 2, userInfo: [NSLocalizedDescriptionKey: "Application not found: \(bundleId)"])
     }
-    NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
+    workspace.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
     print("✅ opened application: \(bundleId)")
     Thread.sleep(forTimeInterval: 0.5)
+    print("NEW focused app: \(workspace.frontmostApplication?.bundleIdentifier ?? "Unknown")")
     dom = getCurrentDom()
 }
 

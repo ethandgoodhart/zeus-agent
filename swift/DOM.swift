@@ -3,8 +3,9 @@ import CoreGraphics
 import AppKit
 import ApplicationServices
 
+public let workspace = NSWorkspace.shared
+
 public func getCurrentDom() -> [Int: AXUIElement] {
-    let workspace = NSWorkspace.shared
     var currentDom: [Int: AXUIElement] = [:]
     
     guard let activeApp = workspace.frontmostApplication else { return [:] }
@@ -38,7 +39,6 @@ public func getCurrentDom() -> [Int: AXUIElement] {
 }
 
 public func getCurrentAppContext() -> String {
-    let workspace = NSWorkspace.shared
     var context = ""
     
     // Get active app info
