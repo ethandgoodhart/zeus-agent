@@ -8,6 +8,7 @@ public let workspace = NSWorkspace.shared
 public func getCurrentDom() -> [Int: AXUIElement] {
     var currentDom: [Int: AXUIElement] = [:]
     let maxElements = 400
+    let maxChildren = 50
     
     guard let activeApp = workspace.frontmostApplication else { return [:] }
     let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
@@ -35,7 +36,9 @@ public func getCurrentDom() -> [Int: AXUIElement] {
         let result = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
         
         if result == .success, let childElements = children as? [AXUIElement] {
-            for child in childElements {
+            // Limit number of children to process at each level
+            let childrenToProcess = childElements.prefix(maxChildren)
+            for child in childrenToProcess {
                 if currentDom.count >= maxElements { break }
                 addElementToDOM(child, depth: depth + 1, nextId: &nextId)
             }

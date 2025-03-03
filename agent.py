@@ -92,6 +92,8 @@ def get_actions_from_llm(prompt):
                 - Mail: "com.apple.mail"
                 - YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C"
                 - Calendar: "com.apple.iCal"
+                - Photos: "com.apple.Photos"
+                - Canary Mail: "io.canarymail.mac"
                 - Notes: "com.apple.Notes"
                 - Chrome: "com.google.Chrome"
 
@@ -172,12 +174,12 @@ def run(task, debug=False):
         actions = get_actions_from_llm(prompt)
         if debug:
             print("json_actions = ", actions, "\n")
-            print("prompt: ", prompt.replace("\n", "\\n"))
+            # print("prompt: ", prompt.replace("\n", "\\n"))
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
         dom_str = executor.get_dom_str()
 
 while True:
     user_input = input("✈️ Enter command: "); print("---------------")
-    run(user_input, debug=False)
+    run(user_input, debug=True)
     print("Task completed successfully\n")
