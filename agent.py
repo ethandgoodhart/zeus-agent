@@ -92,46 +92,51 @@ def get_actions_from_llm(prompt):
     
     return actions
 def execute_actions(past_actions, actions):
+    updated_actions = past_actions.copy()
+    task_completed = False
+    
     for action in actions:
         if "open_app" in action:
             bundle_id = action["open_app"]["bundle_id"]
             executor.open_app(bundle_id)
-            return [False, past_actions+[f"Opened app: {bundle_id}"]]
+            updated_actions.append(f"Opened app: {bundle_id}")
         elif "click_element" in action:
             element_id = action["click_element"]["id"]
             executor.click_element(element_id)
-            return [False, past_actions+[f"Clicked element: {element_id}"]]
+            updated_actions.append(f"Clicked element: {element_id}")
         elif "type" in action:
             text = action["type"]["text"]
             executor.type(text)
-            return [False, past_actions+[f"Typed text: {text}"]]
+            updated_actions.append(f"Typed text: {text}")
         elif "hotkey" in action:
             keys = action["hotkey"]["keys"]
             executor.hotkey(keys)
-            return [False, past_actions+[f"Pressed keys: {keys}"]]
+            updated_actions.append(f"Pressed keys: {keys}")
         elif "wait" in action:
             seconds = action["wait"]["seconds"]
             executor.wait(seconds)
-            return [False, past_actions+[f"Waited {seconds} sec"]]
+            updated_actions.append(f"Waited {seconds} sec")
         elif "finish" in action:
-            return [True, past_actions+["Task completed"]]
-
-# executor.open_app("com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C")
-# executor.click_element(4)
-# executor.type("drake songs")
-# executor.hotkey(["enter"])
-
-while True:
-    is_task_complete = False
-    past_actions = []
-    dom_str = executor.get_dom_str()
-    user_input = input("✈️ Enter command: ")
+            task_completed = True
+            updated_actions.append("Task completed")
     
-    while not is_task_complete:
-        prompt = generate_prompt(dom_str, past_actions, user_input)
-        actions = get_actions_from_llm(prompt)
-        print("actions: ", actions)
-        is_task_complete, past_actions = execute_actions(past_actions, actions)
-        dom_str = executor.get_dom_str()
+    return [task_completed, updated_actions]
 
-    print("Task completed successfully\n")
+# print(executor.get_dom_str()[:150])
+execute_actions([], [{'open_app': {'bundle_id': 'com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C'}}])
+execute_actions([], [{'click_element': {'id': 4}}, {'type': {'text': 'drake'}}, {'hotkey': {'keys': ['enter']}}])
+
+# while True:
+#     is_task_complete = False
+#     past_actions = []
+#     dom_str = executor.get_dom_str()
+#     user_input = input("✈️ Enter command: "); print("---------------")
+
+#     while not is_task_complete:
+#         prompt = generate_prompt(dom_str, past_actions, user_input)
+#         actions = get_actions_from_llm(prompt)
+#         print("prompt: ", prompt[:150].replace("\n", "\\n"))
+#         is_task_complete, past_actions = execute_actions(past_actions, actions)
+#         dom_str = executor.get_dom_str()
+
+#     print("Task completed successfully\n")

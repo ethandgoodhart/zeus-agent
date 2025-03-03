@@ -3,16 +3,12 @@ import CoreGraphics
 import AppKit
 import ApplicationServices
 
-// Global variables for state management
-private let workspace = NSWorkspace.shared
-private var currentDom: [Int: AXUIElement] = [:]
-
 public func getCurrentDom() -> [Int: AXUIElement] {
+    let workspace = NSWorkspace.shared
+    var currentDom: [Int: AXUIElement] = [:]
+    
     guard let activeApp = workspace.frontmostApplication else { return [:] }
     let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
-    
-    // Clear the current DOM before rebuilding
-    currentDom.removeAll()
     
     func addElementToDOM(_ element: AXUIElement, depth: Int = 0, nextId: inout Int) {
         // Check if element is clickable before adding to DOM
@@ -42,6 +38,7 @@ public func getCurrentDom() -> [Int: AXUIElement] {
 }
 
 public func getCurrentAppContext() -> String {
+    let workspace = NSWorkspace.shared
     var context = ""
     
     // Get active app info
@@ -52,6 +49,7 @@ public func getCurrentAppContext() -> String {
     if activeApp.bundleIdentifier != "dev.ethan.flow" {
         context += "#### MacOS app elements:\n"
         
+        let currentDom = getCurrentDom()
         for (id, element) in currentDom.sorted(by: { $0.key < $1.key }) {
             var roleValue: AnyObject?
             AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
