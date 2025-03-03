@@ -9,3 +9,6 @@ utils/__pycache__/
 
 # macOS system files
 .DS_Store
+
+# Swift files
+libexecutor.dylib
