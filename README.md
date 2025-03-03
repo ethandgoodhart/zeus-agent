@@ -1,5 +1,5 @@
 # flow-python
 
-Ultra-low latency automation agent for macOS using Accessibility APIs as DOM to control applications and perform tasks with minimal latency.
+Ultra-low latency macOS automation agent using Accessibility APIs.
 
 ![Flow Demo](flow.gif)
