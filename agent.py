@@ -173,7 +173,7 @@ def run(task, debug=False):
         prompt = generate_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
         if debug:
-            print("json_actions = ", actions, "\n")
+            print("json_actions =", actions, "\n")
             # print("prompt: ", prompt.replace("\n", "\\n"))
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
