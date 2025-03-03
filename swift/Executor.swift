@@ -4,18 +4,16 @@ import CoreGraphics
 
 // Global variables for state management
 private let workspace = NSWorkspace.shared
-private var currentApplicationBundleId: String?
 private var dom: [Int: AXUIElement] = [:]
 
 private func openApplication(bundleId: String) throws {
     guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
         throw NSError(domain: "Executor", code: 2, userInfo: [NSLocalizedDescriptionKey: "Application not found: \(bundleId)"])
     }
-    
     NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
-    currentApplicationBundleId = bundleId
     print("✅ opened application: \(bundleId)")
     Thread.sleep(forTimeInterval: 0.5)
+    dom = getCurrentDom()
 }
 
 private func clickElement(id: Int) throws {
@@ -36,7 +34,7 @@ private func clickElement(id: Int) throws {
     AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
     let title = titleValue as? String ?? ""
     
-    print("✅ clicked on element [\(id)]<\(role)>\(title)</\(role)>")
+    print("✅ clicked on element [\(id)]<\(role)>\(title)</\(role)>, elem=", String(describing: element))
 
     Thread.sleep(forTimeInterval: 0.5)
 }
@@ -44,9 +42,8 @@ private func clickElement(id: Int) throws {
 // MARK: - C Interface
 @_cdecl("get_dom_str") // refreshes DOM, returns it as a String
 public func get_dom_str() -> UnsafeMutablePointer<CChar> {
-    if currentApplicationBundleId == nil { currentApplicationBundleId = workspace.frontmostApplication?.bundleIdentifier }
     dom = getCurrentDom()
-    print("✅ DOM refreshed successfully")
+    print("DOM | refreshed successfully")
     let domString = getCurrentAppContext()
     let cString = strdup(domString)
     return cString!

@@ -6,11 +6,10 @@ import json
 import os
 
 executor = executor.Executor()
-dom_str = executor.get_dom_str()
 print("\033[92mFlow - agent running...\033[0m\n")
 
-def generate_prompt(context, task):
-    prompt = context + "\n"
+def generate_prompt(dom_string, past_actions, task):
+    prompt = dom_string + "\n"
     
     prompt += "### ACTIONS TAKEN SO FAR:\n"
     if not past_actions:
@@ -24,10 +23,10 @@ def generate_prompt(context, task):
     ### ACTIONS AVAILABLE
     1. open_app(bundle_id) - Open app
     2. click_element(id) - Click on element
-    3. type_in_element(id, text) - Type text into element
-    4. keyboard_command(command) - Execute keyboard command on mac eg. cmd+s or enter or cmd+shift+r
+    3. type(text) - Type text at current cursor position
+    4. hotkey(keys) - Execute keyboard shortcuts as a list of keys, e.g. ["cmd", "s"] or ["enter"]
     5. wait(seconds) - Wait for a number of seconds
-    5. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
+    6. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
     
     ### INPUT FORMAT: MacOS app elements
     [ID_NUMBER]<ELEM_TYPE>content inside</ELEM_TYPE> eg. [14]<AXButton>Click me</AXButton> -> reference using only the ID, 14
@@ -39,8 +38,8 @@ def generate_prompt(context, task):
             {"open_app": {"bundle_id": "bundle.id.forapp"}},
             {"click_element": {"id": 1}},
             {"wait": {"seconds": 1}},
-            {"type_in_element": {"id": 2, "text": "new text"}},
-            {"keyboard_command": {"command": "cmd+r"}}
+            {"type": {"text": "new text"}},
+            {"hotkey": {"keys": ["cmd", "r"]}}
         ]
     }
     after confirming that the entire task has been successfully completed
@@ -92,48 +91,47 @@ def get_actions_from_llm(prompt):
     actions = action_json.get("actions", [])
     
     return actions
-def execute_actions(actions):
-    global is_task_complete, past_actions
-    
+def execute_actions(past_actions, actions):
     for action in actions:
         if "open_app" in action:
             bundle_id = action["open_app"]["bundle_id"]
             executor.open_app(bundle_id)
-            past_actions.append(f"Opened app: {bundle_id}")
+            return [False, past_actions+[f"Opened app: {bundle_id}"]]
         elif "click_element" in action:
             element_id = action["click_element"]["id"]
             executor.click_element(element_id)
-            past_actions.append(f"Clicked element: {element_id}")
-        elif "type_in_element" in action:
-            element_id = action["type_in_element"]["id"]
-            text = action["type_in_element"]["text"]
-            executor.click_element(element_id)
+            return [False, past_actions+[f"Clicked element: {element_id}"]]
+        elif "type" in action:
+            text = action["type"]["text"]
             executor.type(text)
-            past_actions.append(f"Typed '{text}' in element: {element_id}")
-        elif "keyboard_command" in action:
-            command = action["keyboard_command"]["command"]
-            keys = command.split("+")
+            return [False, past_actions+[f"Typed text: {text}"]]
+        elif "hotkey" in action:
+            keys = action["hotkey"]["keys"]
             executor.hotkey(keys)
-            past_actions.append(f"Executed keyboard command: {command}")
+            return [False, past_actions+[f"Pressed keys: {keys}"]]
         elif "wait" in action:
             seconds = action["wait"]["seconds"]
             executor.wait(seconds)
-            past_actions.append(f"Waited for {seconds} seconds")
+            return [False, past_actions+[f"Waited {seconds} sec"]]
         elif "finish" in action:
-            is_task_complete = True
-            past_actions.append("Task completed")
-            break
+            return [True, past_actions+["Task completed"]]
+
+# executor.open_app("com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C")
+# executor.click_element(4)
+# executor.type("drake songs")
+# executor.hotkey(["enter"])
 
 while True:
-    user_input = input("✈️ Enter command: ")
-
-    past_actions = []
     is_task_complete = False
+    past_actions = []
+    dom_str = executor.get_dom_str()
+    user_input = input("✈️ Enter command: ")
     
     while not is_task_complete:
-        prompt = generate_prompt(dom_str, user_input)
+        prompt = generate_prompt(dom_str, past_actions, user_input)
         actions = get_actions_from_llm(prompt)
-        execute_actions(actions)
+        print("actions: ", actions)
+        is_task_complete, past_actions = execute_actions(past_actions, actions)
         dom_str = executor.get_dom_str()
 
     print("Task completed successfully\n")

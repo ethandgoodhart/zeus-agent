@@ -26,8 +26,7 @@ class Executor:
     def click_element(self, element_id: int) -> bool:
         return self.lib.clickElement(ctypes.c_int32(element_id))
     def type(self, text: str) -> bool:
-        pyperclip.copy(text)
-        pyautogui.hotkey('command', 'v')
+        pyautogui.write(text)
         print("✅ typed text:", text)
         return True
     def hotkey(self, keys: List[str]) -> bool:

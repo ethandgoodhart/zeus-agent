@@ -5,12 +5,10 @@ import ApplicationServices
 
 // Global variables for state management
 private let workspace = NSWorkspace.shared
-private var currentApplicationBundleId: String?
 private var currentDom: [Int: AXUIElement] = [:]
 
 public func getCurrentDom() -> [Int: AXUIElement] {
     guard let activeApp = workspace.frontmostApplication else { return [:] }
-    currentApplicationBundleId = activeApp.bundleIdentifier
     let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
     
     // Clear the current DOM before rebuilding
@@ -47,10 +45,11 @@ public func getCurrentAppContext() -> String {
     var context = ""
     
     // Get active app info
-    context += "### Active app: \(currentApplicationBundleId ?? "None")\n"
+    guard let activeApp = workspace.frontmostApplication else { return "No active application" }
+    context += "### Active app: \(activeApp.localizedName ?? "Unknown") (\(activeApp.bundleIdentifier ?? "Unknown"))\n"
     
     // Only get DOM if not our own app
-    if currentApplicationBundleId != "dev.ethan.flow" {
+    if activeApp.bundleIdentifier != "dev.ethan.flow" {
         context += "#### MacOS app elements:\n"
         
         for (id, element) in currentDom.sorted(by: { $0.key < $1.key }) {
