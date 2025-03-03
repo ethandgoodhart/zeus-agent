@@ -9,7 +9,7 @@ import os
 executor = executor.Executor()
 print("\033[92mFlow - agent running...\033[0m\n")
 
-def generate_prompt(dom_string, past_actions, task):
+def format_prompt(dom_string, past_actions, task):
     prompt = dom_string + "\n"
     
     prompt += "### ACTIONS TAKEN SO FAR:\n"
@@ -170,7 +170,7 @@ def run(task, debug=False):
     dom_str = initial
 
     for _ in range(max_iterations):
-        prompt = generate_prompt(dom_str, past_actions, task)
+        prompt = format_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
         if debug: print("json_actions =", actions, "\n"); print("prompt: ", prompt.replace("\n", "\\n"))
         is_task_complete, past_actions = execute_actions(past_actions, actions)
@@ -181,3 +181,4 @@ while True:
     user_input = input("✈️ Enter command: "); print("---------------")
     run(user_input, debug=False)
     print("Task completed successfully\n")
+    # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging

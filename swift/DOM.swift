@@ -7,25 +7,44 @@ public let workspace = NSWorkspace.shared
 
 public func getCurrentDom() -> [Int: AXUIElement] {
     var currentDom: [Int: AXUIElement] = [:]
-    let maxElements = 400
-    let maxChildren = 50
+    let maxElements = 500//99999
+    let maxChildren = 100//99999
     
     guard let activeApp = workspace.frontmostApplication else { return [:] }
     let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
+
+    let appFrame = NSScreen.main?.frame ?? CGRect.zero
     
     func addElementToDOM(_ element: AXUIElement, depth: Int = 0, nextId: inout Int) {
         // Skip menu items
         var roleValue: AnyObject?
         AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
         let role = roleValue as? String ?? ""
-        if role == "AXMenuItem" { return }
-        
+        if role == "AXMenuItem" || role == "AXMenuBarItem" { return }
         // Check if element is clickable before adding to DOM
         var actionsArray: CFArray?
-        let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success &&
-            (actionsArray as? [String])?.contains(kAXPressAction) == true
+        let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success && 
+            ((actionsArray as? [String])?.contains(kAXPressAction) == true || 
+             (actionsArray as? [String])?.contains(kAXPickAction) == true || 
+             role == "AXTextArea" || 
+             role == "AXTextField" || 
+             role == "AXButton")
+        // Check if element is outside of frame (screen size)
+        var isVisible = true
+        var position: CFTypeRef?
+        var size: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
+           AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success {
+            var point = CGPoint()
+            var elementSize = CGSize()
+            if AXValueGetValue(position as! AXValue, AXValueType.cgPoint, &point),
+               AXValueGetValue(size as! AXValue, AXValueType.cgSize, &elementSize) {
+                // Check if element is outside app frame
+                isVisible = !(point.x < appFrame.minX || point.y < appFrame.minY || point.x > appFrame.maxX || point.y > appFrame.maxY)
+            }
+        }
         
-        if isClickable && currentDom.count < maxElements {
+        if isClickable && isVisible && currentDom.count < maxElements {
             currentDom[nextId] = element
             nextId += 1
         }
@@ -47,7 +66,8 @@ public func getCurrentDom() -> [Int: AXUIElement] {
     
     var nextId = 1
     addElementToDOM(appRef, nextId: &nextId)
-    
+    print("Got DOM with size \(currentDom.count) elems.")
+
     return currentDom
 }
 
@@ -84,25 +104,18 @@ public func getCurrentAppContext() -> String {
             AXUIElementCopyAttributeValue(element, kAXPlaceholderValueAttribute as CFString, &placeholderValue)
             let placeholder = placeholderValue as? String ?? ""
             
-            // Check if element is clickable
-            var isClickable = false
-            var actionsArray: CFArray?
-            if AXUIElementCopyActionNames(element, &actionsArray) == .success,
-               let actions = actionsArray as? [String],
-               actions.contains(kAXPressAction) {
-                isClickable = true
-            }
-            
+            // Check if element is clickable. Set to true for now, since right now getCurrentDom() only returns clickable elements.
+            let isClickable = true
+
             var elementInfo = ""
             if isClickable {
                 elementInfo = "[\(id)]<\(role)>"
+                if !title.isEmpty { elementInfo += title }
+                if !description.isEmpty { elementInfo += description }
+                if !value.isEmpty { elementInfo += value }
+                if !placeholder.isEmpty { elementInfo += placeholder }
+                elementInfo += "</\(role)>\n"
             }
-            
-            if !title.isEmpty { elementInfo += title }
-            if !description.isEmpty { elementInfo += description }
-            if !value.isEmpty { elementInfo += value }
-            if !placeholder.isEmpty { elementInfo += placeholder }
-            elementInfo += "</\(role)>\n"
             
             context += elementInfo
         }
