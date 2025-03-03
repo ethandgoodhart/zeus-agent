@@ -1,6 +1,6 @@
 # flow-python
 
-Ultra-low latency macOS automation agent using Accessibility APIs.
+Ultra-low latency LLM computer agent using Accessibility APIs.
 
 <br/><div align="center">
 
