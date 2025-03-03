@@ -6,3 +6,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 utils/__pycache__/
+
+# macOS system files
+.DS_Store
