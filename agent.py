@@ -22,38 +22,38 @@ def format_prompt(dom_string, past_actions, task):
     prompt += "\n"
     
     prompt += """
-    ### ACTIONS AVAILABLE
-    1. open_app(bundle_id) - Open app
-    2. click_element(id) - Click on element
-    3. type(text) - Type text at current cursor position
-    4. hotkey(keys) - Execute keyboard shortcuts as a list of keys, e.g. ["cmd", "s"] or ["enter"]
-    5. wait(seconds) - Wait for a number of seconds
-    6. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
-    
-    ### INPUT FORMAT: MacOS app elements
-    [ID_NUMBER]<ELEM_TYPE>content inside</ELEM_TYPE> eg. [14]<AXButton>Click me</AXButton> -> reference using only the ID, 14
+### ACTIONS AVAILABLE
+1. open_app(bundle_id) - Open app
+2. click_element(id) - Click on element
+3. type(text) - Type text at current cursor position
+4. hotkey(keys) - Execute keyboard shortcuts as a list of keys, e.g. ["cmd", "s"] or ["enter"]
+5. wait(seconds) - Wait for a number of seconds
+6. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
 
-    ### RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
-    example:
-    {
-        "actions": [
-            {"open_app": {"bundle_id": "bundle.id.forapp"}},
-            {"click_element": {"id": 1}},
-            {"wait": {"seconds": 1}},
-            {"type": {"text": "new text"}},
-            {"hotkey": {"keys": ["cmd", "r"]}}
-        ]
-    }
-    after confirming that the entire task has been successfully completed
-    {
-        "actions": [
-            {"finish": {}}
-        ]
-    }
+### INPUT FORMAT: MacOS app elements
+[ID_NUMBER]<ELEM_TYPE>content inside</ELEM_TYPE> eg. [14]<AXButton>Click me</AXButton> -> reference using only the ID, 14
 
-    ### CURRENT TASK: """ + task + """
-    
-    Respond with the next actions to take. Only call finish() after another iteration where you have confirmed that the entire task has been successfully completed.
+### RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
+example:
+{
+    "actions": [
+        {"open_app": {"bundle_id": "bundle.id.forapp"}},
+        {"click_element": {"id": 1}},
+        {"wait": {"seconds": 1}},
+        {"type": {"text": "new text"}},
+        {"hotkey": {"keys": ["cmd", "r"]}}
+    ]
+}
+after confirming that the entire task has been successfully completed
+{
+    "actions": [
+        {"finish": {}}
+    ]
+}
+
+### CURRENT TASK: """ + task + """
+
+Respond with the next actions to take. Only call finish() after another iteration where you have confirmed that the entire task has been successfully completed.
     """
     return prompt
 def get_actions_from_llm(prompt):
