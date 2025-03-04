@@ -50,7 +50,7 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         embed = discord.Embed(
-            title="Use one of our prompts below or write your own",
+            title="Welcome to FlowAgent! Tell us what to do, sit back, and see the magic happen. Note that you can move your mouse to the top left of the screen as a failsafe. Pick one of our prompts or create your own.",
             color=0x1DB954
         )
         embed.add_field(name="YouTube Music", value="Play a chill playlist for coding!", inline=False)
