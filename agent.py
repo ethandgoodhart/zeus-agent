@@ -183,6 +183,7 @@ def run(task, debug=False, speak=True):
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
         dom_str = executor.get_dom_str()
+    return "\n".join(past_actions)
 
 if __name__ == "__main__":
     while True:
