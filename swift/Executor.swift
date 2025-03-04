@@ -26,14 +26,8 @@ private func clickElement(id: Int) throws {
     }
     
     // Get element info for success message
-    var roleValue: AnyObject?
-    AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
-    let role = roleValue as? String ?? ""
-    var titleValue: AnyObject?
-    AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
-    let title = titleValue as? String ?? ""
-    
-    print("✅ clicked on element [\(id)]<\(role)>\(title)</\(role)>, elem=", String(describing: element))
+    let elementInfo = getElementInfo(element: element, id: id)
+    print("✅ clicked on element \(elementInfo)")
 
     Thread.sleep(forTimeInterval: 0.5)
 }

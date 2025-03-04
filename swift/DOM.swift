@@ -110,54 +110,57 @@ public func getCurrentDom() -> [Int: AXUIElement] {
     return currentDom
 }
 
+public func getElementInfo(element: AXUIElement, id: Int) -> String {
+    var roleValue: AnyObject?
+    AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
+    let role = roleValue as? String ?? ""
+    
+    var titleValue: AnyObject?
+    AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
+    let title = titleValue as? String ?? ""
+    
+    var descValue: AnyObject?
+    AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descValue)
+    let description = descValue as? String ?? ""
+    
+    var valueAttr: AnyObject?
+    AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueAttr)
+    let value = valueAttr as? String ?? ""
+    
+    var placeholderValue: AnyObject?
+    AXUIElementCopyAttributeValue(element, kAXPlaceholderValueAttribute as CFString, &placeholderValue)
+    let placeholder = placeholderValue as? String ?? ""
+    
+    // Check if element is clickable. Set to true for now, since right now getCurrentDom() only returns clickable elements.
+    let isClickable = true
+
+    var elementInfo = ""
+    if isClickable {
+        elementInfo = "[\(id)]<\(role)>"
+        if !title.isEmpty { elementInfo += title }
+        if !description.isEmpty { elementInfo += description }
+        if !value.isEmpty { elementInfo += value }
+        if !placeholder.isEmpty { elementInfo += placeholder }
+        elementInfo += "</\(role)>\n"
+    }
+
+    return elementInfo
+}
 public func domToString(some_dom: [Int: AXUIElement]) -> String {
     var context = ""
     
     // Get active app info
     let frontAppInfo = getFrontApp()
-    let pid = Int32(frontAppInfo[0]) ?? 0
     let appName = frontAppInfo[1]
     let bundleId = frontAppInfo[2]
-    context += "### Active app: \(appName) (\(bundleId)) pid: \(pid)\n"
+    context += "### Active app: \(appName) (\(bundleId))"
     
     // Only get DOM if not our own app
     if bundleId != "dev.ethan.flow" {
         context += "#### MacOS app elements:\n"
         
         for (id, element) in some_dom.sorted(by: { $0.key < $1.key }) {
-            var roleValue: AnyObject?
-            AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
-            let role = roleValue as? String ?? ""
-            
-            var titleValue: AnyObject?
-            AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
-            let title = titleValue as? String ?? ""
-            
-            var descValue: AnyObject?
-            AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descValue)
-            let description = descValue as? String ?? ""
-            
-            var valueAttr: AnyObject?
-            AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueAttr)
-            let value = valueAttr as? String ?? ""
-            
-            var placeholderValue: AnyObject?
-            AXUIElementCopyAttributeValue(element, kAXPlaceholderValueAttribute as CFString, &placeholderValue)
-            let placeholder = placeholderValue as? String ?? ""
-            
-            // Check if element is clickable. Set to true for now, since right now getCurrentDom() only returns clickable elements.
-            let isClickable = true
-
-            var elementInfo = ""
-            if isClickable {
-                elementInfo = "[\(id)]<\(role)>"
-                if !title.isEmpty { elementInfo += title }
-                if !description.isEmpty { elementInfo += description }
-                if !value.isEmpty { elementInfo += value }
-                if !placeholder.isEmpty { elementInfo += placeholder }
-                elementInfo += "</\(role)>\n"
-            }
-            
+            let elementInfo = getElementInfo(element: element, id: id)
             context += elementInfo
         }
     }

@@ -27,7 +27,7 @@ def format_prompt(dom_string, past_actions, task):
 2. click_element(id) - Click on element
 3. type(text) - Type text at current cursor position
 4. hotkey(keys) - Execute keyboard shortcuts as a list of keys, e.g. ["cmd", "s"] or ["enter"]
-5. wait(seconds) - Wait for a number of seconds
+5. wait(seconds) - Wait for a number of seconds (less is better)
 6. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
 
 ### INPUT FORMAT: MacOS app elements
@@ -189,7 +189,7 @@ def run(task, debug=False, speak=True):
 
 if __name__ == "__main__":
     while True:
-        user_input = input("✈️ Enter command: "); print("---------------")
-        run(user_input, debug=False, speak=False)
-        print("Task completed successfully\n")
-        # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
+        # user_input = input("✈️ Enter command: "); print("---------------")
+        # run(user_input, debug=False, speak=False)
+        # print("Task completed successfully\n")
+        import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
