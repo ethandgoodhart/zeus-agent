@@ -11,8 +11,6 @@ Ultra-low latency LLM computer agent using Accessibility APIs.
 
 ## Installation
 
-### Prerequisites
-
 1. Install BlackHole virtual audio driver:
    ```bash
    brew install blackhole-2ch
@@ -22,6 +20,3 @@ Ultra-low latency LLM computer agent using Accessibility APIs.
    ```bash
    sudo shutdown -r now
    ```
-
-After restarting, the BlackHole virtual audio device will be available for routing audio between applications.
-
