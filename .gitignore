@@ -12,3 +12,6 @@ utils/__pycache__/
 
 # Swift files
 libexecutor.dylib
+
+# seleniumbase
+downloaded_files/
