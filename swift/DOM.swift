@@ -16,12 +16,14 @@ public func getCurrentDom() -> [Int: AXUIElement] {
     let appFrame = NSScreen.main?.frame ?? CGRect.zero
     
     func addElementToDOM(_ element: AXUIElement, depth: Int = 0, nextId: inout Int) {
+        // Don't process if maxElements reached
+        if currentDom.count >= maxElements { return }
         // Skip menu items
         var roleValue: AnyObject?
         AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
         let role = roleValue as? String ?? ""
         if role == "AXMenuItem" || role == "AXMenuBarItem" { return }
-        // Check if element is clickable before adding to DOM
+        // Skip non-clickable elements
         var actionsArray: CFArray?
         let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success && 
             ((actionsArray as? [String])?.contains(kAXPressAction) == true || 
@@ -29,7 +31,7 @@ public func getCurrentDom() -> [Int: AXUIElement] {
              role == "AXTextArea" || 
              role == "AXTextField" || 
              role == "AXButton")
-        // Check if element is outside of frame (screen size)
+        // Skip element outside of screen based on dimensions
         var isVisible = true
         var position: CFTypeRef?
         var size: CFTypeRef?
@@ -39,8 +41,8 @@ public func getCurrentDom() -> [Int: AXUIElement] {
             var elementSize = CGSize()
             if AXValueGetValue(position as! AXValue, AXValueType.cgPoint, &point),
                AXValueGetValue(size as! AXValue, AXValueType.cgSize, &elementSize) {
-                // Check if element is outside app frame
                 isVisible = !(point.x < appFrame.minX || point.y < appFrame.minY || point.x > appFrame.maxX || point.y > appFrame.maxY)
+                if !isVisible { return }
             }
         }
         
@@ -48,8 +50,6 @@ public func getCurrentDom() -> [Int: AXUIElement] {
             currentDom[nextId] = element
             nextId += 1
         }
-        
-        if currentDom.count >= maxElements { return }
         
         var children: AnyObject?
         let result = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)

@@ -1,11 +1,16 @@
-from dotenv import load_dotenv; load_dotenv()
+from dotenv import load_dotenv
 import threading
-from elevenlabs import generate, play
 import os
-import elevenlabs; elevenlabs.set_api_key(os.getenv("ELEVENLABS_API_KEY"))
-import io
 import requests
 import json
+from elevenlabs.client import ElevenLabs
+from elevenlabs import play
+
+load_dotenv()
+
+# Initialize ElevenLabs client
+client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+
 # Create a lock to prevent multiple narrations from running simultaneously
 narration_lock = threading.Lock()
 
@@ -37,7 +42,14 @@ def async_narrate(actions):
             candidates = data.get("candidates", [])
             narration = candidates[0]["content"]["parts"][0]["text"] if candidates else ""
 
-            audio = generate(text=narration, voice="NYC9WEgkq1u4jiqBseQ9", model="eleven_flash_v2_5")
+            # Convert text to speech using the new ElevenLabs client
+            audio = client.text_to_speech.convert(
+                text=narration,
+                voice_id="NYC9WEgkq1u4jiqBseQ9",
+                model_id="eleven_flash_v2_5",
+                output_format="mp3_44100_128",
+            )
+            
             play(audio)  # This is blocking and will wait until audio finishes playing
         except Exception as e:
             print(f"Narration error: {e}")

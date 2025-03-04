@@ -11,8 +11,8 @@ private func openApplication(bundleId: String) throws {
     }
     workspace.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
     print("✅ opened application: \(bundleId)")
-    Thread.sleep(forTimeInterval: 0.3)
-    // print("NEW focused app: \(workspace.frontmostApplication?.bundleIdentifier ?? "Unknown")")
+    Thread.sleep(forTimeInterval: 0.5)
+    print("NEW focused app: \(workspace.frontmostApplication?.bundleIdentifier ?? "Unknown")")
     dom = getCurrentDom()
 }
 
