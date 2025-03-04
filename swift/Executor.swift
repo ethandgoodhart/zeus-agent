@@ -42,7 +42,7 @@ private func clickElement(id: Int) throws {
 @_cdecl("get_dom_str") // refreshes DOM, returns it as a String
 public func get_dom_str() -> UnsafeMutablePointer<CChar> {
     dom = getCurrentDom()
-    let domString = getCurrentAppContext()
+    let domString = domToString(some_dom: dom)
     let cString = strdup(domString)
     return cString!
 }

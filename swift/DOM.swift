@@ -110,7 +110,7 @@ public func getCurrentDom() -> [Int: AXUIElement] {
     return currentDom
 }
 
-public func getCurrentAppContext() -> String {
+public func domToString(some_dom: [Int: AXUIElement]) -> String {
     var context = ""
     
     // Get active app info
@@ -124,8 +124,7 @@ public func getCurrentAppContext() -> String {
     if bundleId != "dev.ethan.flow" {
         context += "#### MacOS app elements:\n"
         
-        let currentDom = getCurrentDom()
-        for (id, element) in currentDom.sorted(by: { $0.key < $1.key }) {
+        for (id, element) in some_dom.sorted(by: { $0.key < $1.key }) {
             var roleValue: AnyObject?
             AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
             let role = roleValue as? String ?? ""
