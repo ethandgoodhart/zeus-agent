@@ -9,9 +9,17 @@ Ultra-low latency LLM computer agent using Accessibility APIs.
 
 </div>
 
-## Installation
+## Usage
 
-1. Install BlackHole virtual audio driver:
+```bash
+pip install -r requirements.txt
+```
+```bash
+python3 agent.py
+```
+
+
+<!-- 1. Install BlackHole virtual audio driver:
    ```bash
    brew install blackhole-2ch
    ```
@@ -19,4 +27,4 @@ Ultra-low latency LLM computer agent using Accessibility APIs.
 2. Restart your computer to complete the audio driver installation:
    ```bash
    sudo shutdown -r now
-   ```
+   ``` -->

@@ -1,6 +1,5 @@
 import subprocess, os, ctypes
 from typing import Optional, List
-import pyperclip
 import pyautogui
 import time
 
