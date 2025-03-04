@@ -1,6 +1,7 @@
 from dotenv import load_dotenv; load_dotenv()
 import utils.__applist__ as __applist__
 import utils.executor as executor
+import utils.narrator as narrator
 import subprocess
 import requests
 import json
@@ -163,7 +164,7 @@ def get_initial_dom_str():
     return dom_str
 initial = get_initial_dom_str()
 
-def run(task, debug=False):
+def run(task, debug=False, speak=True):
     max_iterations = 6
     is_task_complete = False
     past_actions = []
@@ -173,12 +174,13 @@ def run(task, debug=False):
         prompt = format_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
         if debug: print("json_actions =", actions, "\n"); print("prompt: ", prompt)
+        if speak: narrator.async_narrate(actions)
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
         dom_str = executor.get_dom_str()
 
 while True:
     user_input = input("✈️ Enter command: "); print("---------------")
-    run(user_input, debug=False)
+    run(user_input, debug=False, speak=True)
     print("Task completed successfully\n")
     # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
