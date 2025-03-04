@@ -27,7 +27,7 @@ class AppView(View):
             ("YouTube Music", "Play a chill playlist for coding!", discord.ButtonStyle.primary),
             ("Reminders", "Set a reminder tomorrow at 9:00 AM for a dentist appointment", discord.ButtonStyle.success),
             ("Messages", "Give me a summary of my unread messages", discord.ButtonStyle.secondary),
-            ("Finder", "Create a python file called flow.py in my documents folder", discord.ButtonStyle.danger)
+            ("Finder", "Create a folder called testing in my documents folder", discord.ButtonStyle.danger)
         ]
 
         for name, description, color in apps:
@@ -37,7 +37,10 @@ class AppView(View):
 
     def create_callback(self, message):
         async def callback(interaction: discord.Interaction):
-            await interaction.response.send_message(message, ephemeral=False)
+            await interaction.response.defer()  # Acknowledge the interaction
+            logger.info(f"Processing button click for: {message}")
+            response = agent.run(message, debug=False, speak=False)
+            await interaction.followup.send(response, ephemeral=False)
         return callback
 
 @bot.event
@@ -53,7 +56,7 @@ async def on_ready():
         embed.add_field(name="YouTube Music", value="Play a chill playlist for coding!", inline=False)
         embed.add_field(name="Reminders", value="Set a reminder tomorrow at 9:00 AM for a dentist appointment", inline=False)
         embed.add_field(name="Messages", value="Give me a summary of my unread messages", inline=False)
-        embed.add_field(name="Finder", value="Create a python file called flow.py in my documents folder", inline=False)
+        embed.add_field(name="Finder", value="Create a folder called testing in my documents folder", inline=False)
 
         embed.set_thumbnail(url="https://i.ibb.co/4g8QJ7z7/Adobe-Express-file-1-1.png")  
 
