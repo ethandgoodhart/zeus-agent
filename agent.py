@@ -184,8 +184,9 @@ def run(task, debug=False, speak=True):
         if is_task_complete: break
         dom_str = executor.get_dom_str()
 
-while True:
-    user_input = input("✈️ Enter command: "); print("---------------")
-    run(user_input, debug=False, speak=False)
-    print("Task completed successfully\n")
-    # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
+if __name__ == "__main__":
+    while True:
+        user_input = input("✈️ Enter command: "); print("---------------")
+        run(user_input, debug=False, speak=False)
+        print("Task completed successfully\n")
+        # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
