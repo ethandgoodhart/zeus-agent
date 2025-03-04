@@ -5,13 +5,52 @@ import ApplicationServices
 
 public let workspace = NSWorkspace.shared
 
+public func getFrontApp() -> [String] {
+    let frontmostAppScript = """
+    tell application "System Events"
+        set frontApp to first process whose frontmost is true
+        set pid to unix id of frontApp
+        set appName to name of frontApp
+        set bundleId to bundle identifier of frontApp
+        return {pid, appName, bundleId}
+    end tell
+    """
+    
+    let process = Process()
+    process.launchPath = "/usr/bin/osascript"
+    process.arguments = ["-e", frontmostAppScript]
+    
+    let outputPipe = Pipe()
+    process.standardOutput = outputPipe
+    
+    do {
+        try process.run()
+        process.waitUntilExit()
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        if let scriptOutput = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+            let components = scriptOutput.components(separatedBy: ", ")
+            if components.count >= 3 {
+                return [components[0], components[1], components[2]]
+            }
+        }
+    } catch {
+        print("Process error: \(error)")
+    }
+    
+    return ["0", "Unknown", ""]
+}
+
 public func getCurrentDom() -> [Int: AXUIElement] {
     var currentDom: [Int: AXUIElement] = [:]
     let maxElements = 500//99999
     let maxChildren = 100//99999
     
-    guard let activeApp = workspace.frontmostApplication else { return [:] }
-    let appRef = AXUIElementCreateApplication(activeApp.processIdentifier)
+    let frontAppInfo = getFrontApp()
+    let pid = Int32(frontAppInfo[0]) ?? 0
+    let appName = frontAppInfo[1]
+    let bundleId = frontAppInfo[2]
+    let appRef = AXUIElementCreateApplication(pid)
+    print("getCurrentDom() - activeApp: \(appName) (\(bundleId))")
 
     let appFrame = NSScreen.main?.frame ?? CGRect.zero
     
@@ -75,11 +114,14 @@ public func getCurrentAppContext() -> String {
     var context = ""
     
     // Get active app info
-    guard let activeApp = workspace.frontmostApplication else { return "No active application" }
-    context += "### Active app: \(activeApp.localizedName ?? "Unknown") (\(activeApp.bundleIdentifier ?? "Unknown"))\n"
+    let frontAppInfo = getFrontApp()
+    let pid = Int32(frontAppInfo[0]) ?? 0
+    let appName = frontAppInfo[1]
+    let bundleId = frontAppInfo[2]
+    context += "### Active app: \(appName) (\(bundleId)) pid: \(pid)\n"
     
     // Only get DOM if not our own app
-    if activeApp.bundleIdentifier != "dev.ethan.flow" {
+    if bundleId != "dev.ethan.flow" {
         context += "#### MacOS app elements:\n"
         
         let currentDom = getCurrentDom()

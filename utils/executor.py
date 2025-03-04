@@ -35,7 +35,7 @@ class Executor:
     def hotkey(self, keys: List[str]) -> bool:
         modified_keys = [key.replace('control', 'ctrl').replace('cmd', 'command') if isinstance(key, str) else key for key in keys]
         pyautogui.hotkey(*modified_keys)
-        print("✅ pressed keys:", keys)
+        print("✅ pressed keys:", modified_keys)
         return True
     # action 5
     def wait(self, seconds: float) -> bool:

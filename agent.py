@@ -114,7 +114,7 @@ def get_actions_from_llm(prompt):
         text = text.split("```json", 1)[1]
     text = text.replace("```", "").strip()
     
-    action_json = json.loads(text)
+    action_json = json.loads(text, strict=False) # allows \t and other chars which could cause issues
     actions = action_json.get("actions", [])
     
     return actions
@@ -170,7 +170,7 @@ def get_initial_dom_str():
 initial = get_initial_dom_str()
 
 def run(task, debug=False, speak=True):
-    max_iterations = 6
+    max_iterations = 5
     is_task_complete = False
     past_actions = []
     dom_str = initial
@@ -183,6 +183,8 @@ def run(task, debug=False, speak=True):
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
         dom_str = executor.get_dom_str()
+        print("---------------")
+        
     return "\n".join(past_actions)
 
 if __name__ == "__main__":
