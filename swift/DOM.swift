@@ -66,7 +66,7 @@ public func getCurrentDom() -> [Int: AXUIElement] {
     
     var nextId = 1
     addElementToDOM(appRef, nextId: &nextId)
-    print("Got DOM with size \(currentDom.count) elems.")
+    // print("Got DOM with size \(currentDom.count) elems.")
 
     return currentDom
 }

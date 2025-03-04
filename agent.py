@@ -76,7 +76,7 @@ def get_actions_from_llm(prompt):
                 - Wait appropriate times between actions that need processing
 
                 WORKFLOW:
-                1. If no previous actions exist, your ONLY response should be to open the most appropriate app:
+                1. Only if active app is NO_APP, your ONLY response should be to open the most appropriate app:
                    {
                      "actions": [
                        {"open_app": {"bundle_id": "com.appropriate.app"}}
@@ -125,31 +125,36 @@ def execute_actions(past_actions, actions):
     for action in actions:
         if "open_app" in action:
             bundle_id = action["open_app"]["bundle_id"]
-            executor.open_app(bundle_id)
-            updated_actions.append(f"Opened app: {bundle_id}")
+            result = executor.open_app(bundle_id)
+            status = "✅" if result else "❌ [FAILED]"
+            updated_actions.append(f"{status} Opened app: {bundle_id}")
         elif "click_element" in action:
             element_id = action["click_element"]["id"]
-            executor.click_element(element_id)
-            updated_actions.append(f"Clicked element: {element_id}")
+            result = executor.click_element(element_id)
+            status = "✅" if result else "❌ [FAILED]"
+            updated_actions.append(f"{status} Clicked element: {element_id}")
         elif "type" in action:
             text = action["type"]["text"]
-            executor.type(text)
-            updated_actions.append(f"Typed text: {text}")
+            result = executor.type(text)
+            status = "✅" if result else "❌ [FAILED]"
+            updated_actions.append(f"{status} Typed text: {text}")
         elif "hotkey" in action:
             keys = action["hotkey"]["keys"]
-            executor.hotkey(keys)
-            updated_actions.append(f"Pressed keys: {keys}")
+            result = executor.hotkey(keys)
+            status = "✅" if result else "❌ [FAILED]"
+            updated_actions.append(f"{status} Pressed keys: {keys}")
         elif "wait" in action:
             seconds = action["wait"]["seconds"]
-            executor.wait(seconds)
-            updated_actions.append(f"Waited {seconds} sec")
+            result = executor.wait(seconds)
+            status = "✅" if result else "❌ [FAILED]"
+            updated_actions.append(f"{status} Waited {seconds} sec")
         elif "finish" in action:
             task_completed = True
             updated_actions.append("Task completed")
     
     return [task_completed, updated_actions]
 def get_initial_dom_str():
-    dom_str = "### Active app: None (None)\n"
+    dom_str = "### Active app: NO_APP\n"
     try:
         app_list = subprocess.check_output(["osascript", "-e", 'tell application "System Events" to get name of every process whose background only is false']).decode().strip()
         bundle_ids = subprocess.check_output(["osascript", "-e", 'tell application "System Events" to get bundle identifier of every process whose background only is false']).decode().strip()
@@ -173,7 +178,7 @@ def run(task, debug=False, speak=True):
     for _ in range(max_iterations):
         prompt = format_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
-        if debug: print("json_actions =", actions, "\n"); print("prompt: ", prompt)
+        if debug: print("prompt: ", prompt)#print("json_actions =", actions, "\n");
         if speak: narrator.async_narrate(actions)
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
@@ -181,6 +186,6 @@ def run(task, debug=False, speak=True):
 
 while True:
     user_input = input("✈️ Enter command: "); print("---------------")
-    run(user_input, debug=False, speak=True)
+    run(user_input, debug=False, speak=False)
     print("Task completed successfully\n")
     # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
