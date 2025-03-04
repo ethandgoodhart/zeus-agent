@@ -7,6 +7,8 @@ from discord.ext import commands
 from discord.ui import View, Button
 from dotenv import load_dotenv
 import agent
+import utils.speech as speech
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ class AppView(View):
 
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user}")
+    print(f"✅ Logged in as {bot.user}")# Get speech as a single command
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
@@ -64,6 +66,24 @@ async def on_ready():
         print(f"📨 Sent message in #{channel.name}!")
     else:
         print("❌ ERROR: Could not find the channel.")
+    
+    bot.loop.create_task(listen_for_commands())
+
+async def listen_for_commands():
+    """Continuously listens for speech and processes commands in parallel."""
+    while True:
+        print("🎤 Listening for 'Hey Flow'...")
+
+        command = await asyncio.to_thread(speech.get_speech_command)  # Run speech recognition in a separate thread
+
+        if command:
+            print(f"✅ Running command: {command}")
+            response = await asyncio.to_thread(agent.run, command, False, False)
+            print(f"✅ Task completed: {response}")
+            
+        else:
+            print("🔇 No valid command detected. Restarting listener...")
+    
 
 @bot.event
 async def on_message(message: discord.Message):
