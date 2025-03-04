@@ -74,15 +74,15 @@ def get_actions_from_llm(prompt):
                 - Prefer keyboard shortcuts over clicking when efficient
                 - Break complex tasks into logical sequences
                 - Wait appropriate times between actions that need processing
+                - If the app is already open and loaded, don't open it again
 
                 WORKFLOW:
-                1. Only if active app is NO_APP, your ONLY response should be to open the most appropriate app:
+                1. ONLY IF active app is NO_APP, on the first response, you should open the most appropriate app:
                    {
                      "actions": [
                        {"open_app": {"bundle_id": "com.appropriate.app"}}
                      ]
                    }
-
                 2. After app is open, observe the interface and plan your approach
                 3. Execute precise action sequences to complete the task
                 4. Verify completion before calling finish()
