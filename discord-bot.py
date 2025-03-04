@@ -16,6 +16,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = 1345727973550067802
 
 intents = discord.Intents.default()
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 class AppView(View):
@@ -78,7 +79,7 @@ async def on_message(message: discord.Message):
     # Process the message with the agent you wrote
     # Open up the agent.py file to customize the agent
     logger.info(f"Processing message from {message.author}: {message.content}")
-    response = await agent.run(message.content, debug=False, speak=False)
+    response = agent.run(message.content, debug=False, speak=False)
 
     # Send the response back to the channel
     await message.reply(response)
