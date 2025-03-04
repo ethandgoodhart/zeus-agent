@@ -25,8 +25,8 @@ class AppView(View):
 
         apps = [
             ("YouTube Music", "Play a chill playlist for coding!", discord.ButtonStyle.primary),
-            ("Reminders", "Set a reminder tomorrow at 9:00 AM for a dentist appointment", discord.ButtonStyle.success),
-            ("Messages", "Give me a summary of my unread messages", discord.ButtonStyle.secondary),
+            ("Calendar", "Set a dentist appointment for Thursday at 9:00 AM", discord.ButtonStyle.success),
+            ("Messages", "Send a text message to the CS 153 group chat saying look at this test!", discord.ButtonStyle.secondary),
             ("Finder", "Create a folder called testing in my documents folder", discord.ButtonStyle.danger)
         ]
 
@@ -54,8 +54,8 @@ async def on_ready():
             color=0x1DB954
         )
         embed.add_field(name="YouTube Music", value="Play a chill playlist for coding!", inline=False)
-        embed.add_field(name="Reminders", value="Set a reminder tomorrow at 9:00 AM for a dentist appointment", inline=False)
-        embed.add_field(name="Messages", value="Give me a summary of my unread messages", inline=False)
+        embed.add_field(name="Reminders", value="Set a dentist appointment for Thursday at 9:00 AM", inline=False)
+        embed.add_field(name="Messages", value="Send a text message to the CS 153 group chat saying look at this test!", inline=False)
         embed.add_field(name="Finder", value="Create a folder called testing in my documents folder", inline=False)
 
         embed.set_thumbnail(url="https://i.ibb.co/4g8QJ7z7/Adobe-Express-file-1-1.png")  
