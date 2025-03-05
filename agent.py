@@ -8,7 +8,7 @@ import json
 import os
 
 executor = executor.Executor()
-print("\033[Zeus - agent running...\033[0m\n")
+print("\033[92mZeus - agent running...\033[0m\n")
 system_prompt = """You are Zeus, a macOS automation assistant designed to complete user tasks through precise UI interactions.
 
 YOUR ROLE:
