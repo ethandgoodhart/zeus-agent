@@ -2,3 +2,7 @@ python-dotenv==1.0.0
 requests==2.32.3
 PyAutoGUI==0.9.54
 elevenlabs==1.52.0
+discord.py==2.5.2
+torch==2.6.0
+faster-whisper==1.1.1
+pyaudio==0.2.14
