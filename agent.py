@@ -32,21 +32,27 @@ CRITICAL RULES:
 EXACT WORKFLOW:
 1. STARTING A TASK:
 - If no app is open (active app is "NO_APP"), first open the appropriate app:
-    {
+{
     "actions": [
         {"open_app": {"bundle_id": "com.appropriate.app"}}
     ]
 }
     
 2. EXECUTING THE TASK:
-    - Observe the interface carefully
-    - Plan your approach based on what you see
-    - Execute actions in a logical sequence
-    - If you get stuck, try alternative approaches to complete the task
+  - Observe the interface carefully
+  - Plan your approach based on what you see
+  - Execute actions in a logical sequence
+  - If you get stuck, try alternative approaches to complete the task
 
 3. COMPLETING THE TASK:
-    - Only call finish() when the ENTIRE task is complete
-    - Verify completion by examining the final screen state
+  - Only call finish() after the ENTIRE task is complete
+  - Verify completion by examining the final screen state
+  - If the task has already been completed, use the finish action:
+{
+    "actions": [
+        {"finish": {}}
+    ]
+}
 
 COMMON APP BUNDLE IDs:
 - Safari: "com.apple.Safari"
