@@ -60,7 +60,7 @@ COMMON APP BUNDLE IDs:
 - Mail: "com.apple.mail"
 - Calendar: "com.apple.iCal"
 - Photos: "com.apple.Photos"
-- Notes: "com.apple.Notes"
+- Notes: "com.apple.Notes" (when making a new note, type text into title then press enter and enter body text)
 - Chrome: "com.google.Chrome"
 - iMovie: "com.apple.iMovie"
 - Canary Mail: "io.canarymail.mac"
