@@ -2,6 +2,7 @@ from dotenv import load_dotenv; load_dotenv()
 import utils.__applist__ as __applist__
 import utils.executor as executor
 import utils.narrator as narrator
+import utils.planner as planner
 import subprocess
 import requests
 import json
@@ -16,37 +17,35 @@ YOUR ROLE:
 - You can see and interact with all native and third-party applications
 - Your goal is to complete tasks efficiently and thoroughly
 
-CORE PRINCIPLES:
-1. ANALYZE FIRST: Always examine the current screen before acting
-2. BE EFFICIENT: Choose the most direct path to complete tasks
-3. BE METHODICAL: Break complex tasks into clear steps
-4. BE THOROUGH: Complete the entire task, not just part of it
-
 CRITICAL RULES:
 1. NEVER open an app that's already open
 2. END your action sequence immediately after any operation that might trigger a popup or dialog
 3. USE the wait action as little as possible
-4. use keyboard shortcuts only when you are confident the action will be successful
+4. Use keyboard shortcuts only when you are confident the action will be successful
 
-EXACT WORKFLOW:
-1. STARTING A TASK:
+WORKFLOW:
+1. STARTING:
 - If no app is open (active app is "NO_APP"), first open the appropriate app:
 {
     "actions": [
         {"open_app": {"bundle_id": "com.appropriate.app"}}
     ]
 }
-    
-2. EXECUTING THE TASK:
-  - Observe the interface carefully
-  - Plan your approach based on what you see
-  - Execute actions in a logical sequence
-  - If you get stuck, try a different approach
+
+2. FOLLOWING THE PLAN:
+- Generate a short sequence of actions for the next step in the plan
+- Don't try to complete the entire task at once
+- Adapt to what you see on screen while following the general plan
+- Example for "Click on 'Playlists' in the sidebar":
+{
+    "actions": [
+        {"click_element": {"id": 42}}
+    ]
+}
 
 3. COMPLETING THE TASK:
-  - Only call finish() after the ENTIRE task is complete
-  - Verify completion by examining the final screen state
-  - If the task has already been completed, use the finish action:
+- Only call finish() when the entire task is complete
+- If the goal has already been completed:
 {
     "actions": [
         {"finish": {}}
@@ -59,24 +58,15 @@ COMMON APP BUNDLE IDs:
 - Mail: "com.apple.mail"
 - Calendar: "com.apple.iCal"
 - Photos: "com.apple.Photos"
-- Notes: "com.apple.Notes" (when making a new note, type text into title then press enter and enter body text)
+- Notes: "com.apple.Notes" (when making a new note, type text into title first, then press enter twice, then enter body text)
 - Chrome: "com.google.Chrome"
 - iMovie: "com.apple.iMovie"
 - Canary Mail: "io.canarymail.mac"
 - YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C" (pause button means song is playing)
 """
 
-def format_prompt(dom_string, past_actions, task):
+def format_prompt(dom_string, past_actions, plan_steps, task):
     prompt = dom_string + "\n"
-    
-    prompt += "### ACTIONS TAKEN SO FAR:\n"
-    if not past_actions:
-        prompt += "none\n"
-    else:
-        for i, action in enumerate(past_actions):
-            prompt += f"{i + 1}. {action}\n"
-    prompt += "\n"
-    
     prompt += """
 ### ACTIONS AVAILABLE
 1. open_app(bundle_id) - Open app
@@ -100,17 +90,24 @@ example:
         {"hotkey": {"keys": ["cmd", "t"]}}
     ]
 }
-if the task is already completed, then based on the page respond only with:
+if the goal is already completed, then based on the page respond only with:
 {
     "actions": [
         {"finish": {}}
     ]
 }
 
-### CURRENT TASK: """ + task + """
+### GOAL: """ + task + """
+### GENERAL STEPS: """ + "\n".join([f"{i+1}. {step}" for i, step in enumerate(plan_steps)]) + """
+### ACTIONS TAKEN SO FAR:\n"""
+    
+    if not past_actions:
+        prompt += "none\n\n"
+    else:
+        for i, action in enumerate(past_actions):
+            prompt += f"{i + 1}. {action}\n\n"
 
-Respond with the next actions to take. Only call finish() if the task was already completed, based on the page.
-    """
+    prompt += """Respond with the next actions to take. Only call finish() if the task was already completed, based on the page."""
     return prompt
 def get_actions_from_llm(prompt):
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -184,6 +181,7 @@ def execute_actions(past_actions, actions):
             updated_actions.append("Task completed")
     
     return [task_completed, updated_actions]
+
 def get_initial_dom_str():
     dom_str = "### Active app: NO_APP\n"
     try:
@@ -205,9 +203,11 @@ def run(task, debug=False, speak=True): # avg. ~$0.002/run
     is_task_complete = False
     past_actions = []
     dom_str = initial
+    plan_steps = planner.plan(task)
+    print(f"✅ Planned {len(plan_steps)} general steps to accomplish the goal.")
 
     for _ in range(max_iterations):
-        prompt = format_prompt(dom_str, past_actions, task)
+        prompt = format_prompt(dom_str, past_actions, plan_steps, task)
         actions = get_actions_from_llm(prompt)
         if debug: print("json_actions =", actions, "\n")
         if speak: narrator.async_narrate(actions)

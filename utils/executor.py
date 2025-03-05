@@ -40,7 +40,7 @@ class Executor:
             time.sleep(0.1)
         finally:
             pyperclip.copy(original_clipboard)
-        print("✅ typed text fast:", text)
+        print("✅ typed text fast:", text, "into elementid=", element_id)
         return True
     # action 4
     def hotkey(self, keys: List[str]) -> bool:

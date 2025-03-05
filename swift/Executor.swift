@@ -22,8 +22,6 @@ private func openApplication(bundleId: String) throws {
     let waitTime = isAppAlreadyRunning ? 0.5 : 3.0
     print("waiting for \(waitTime)s")
     Thread.sleep(forTimeInterval: waitTime)
-    
-    dom = getCurrentDom()
 }
 
 private func clickElement(clickableId: Int) throws {
@@ -32,15 +30,38 @@ private func clickElement(clickableId: Int) throws {
         throw NSError(domain: "Executor", code: 3, userInfo: [NSLocalizedDescriptionKey: "Clickable element not found: \(clickableId)"])
     }
 
-    let error = AXUIElementPerformAction(element.uielem, kAXPressAction as CFString)
-    if error != .success {
-        throw NSError(domain: "Executor", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to click element with clickableId: \(clickableId), info: \(getElementInfo(element: element))"])
-    }
-    
     // Get element info for success message
     let elementInfo = getElementInfo(element: element)
-    print("✅ clicked on clickableId=\(clickableId) with info \(elementInfo)")
 
+    // Get the frame of the element
+    var position: AnyObject?
+    var size: AnyObject?    
+    if AXUIElementCopyAttributeValue(element.uielem, kAXPositionAttribute as CFString, &position) == .success,
+       AXUIElementCopyAttributeValue(element.uielem, kAXSizeAttribute as CFString, &size) == .success {
+        var point = CGPoint()
+        var elementSize = CGSize()
+        if AXValueGetValue(position as! AXValue, AXValueType.cgPoint, &point),
+           AXValueGetValue(size as! AXValue, AXValueType.cgSize, &elementSize) {
+            let centerX = point.x + elementSize.width / 2
+            let centerY = point.y + elementSize.height / 2
+            let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint(x: centerX, y: centerY), mouseButton: .left)
+            let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: CGPoint(x: centerX, y: centerY), mouseButton: .left)
+            mouseDown?.post(tap: .cghidEventTap)
+            mouseUp?.post(tap: .cghidEventTap)
+        } else {
+            throw NSError(domain: "Executor", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to get position and size for element with info= \(elementInfo)"])
+        }
+    } else {
+        throw NSError(domain: "Executor", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to get position and size for element with info= \(elementInfo)"])
+    }
+    
+    // Commented out press action logic
+    // let error = AXUIElementPerformAction(element.uielem, kAXPressAction as CFString)
+    // if error != .success {
+    //     throw NSError(domain: "Executor", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to click element with clickableId: \(clickableId), info: \(getElementInfo(element: element))"])
+    // }
+    
+    print("✅ clicked on clickableId=\(clickableId) using (coords) with info \(elementInfo)")
     Thread.sleep(forTimeInterval: 0.3)
 }
 

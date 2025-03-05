@@ -154,7 +154,6 @@ public func getElementInfo(element: DOMElement) -> String {
     if element.isClickable, let clickableId = element.clickableId {
         // Get the normalized element role
         let role = element.role //.replacingOccurrences(of: "AX", with: "")
-        
         elementInfo = "[\(clickableId)]<\(role)>"
         
         // Add attributes
@@ -193,6 +192,13 @@ public func getElementInfo(element: DOMElement) -> String {
         if !text.isEmpty {
             elementInfo += text
         }
+
+        // var domClassListRef: CFTypeRef?
+        // AXUIElementCopyAttributeValue(element.uielem, "AXDOMClassList" as CFString, &domClassListRef)
+        // let classList = domClassListRef as? [String] ?? []
+        // if !classList.isEmpty {
+        //     emmetNotation += "." + classList.joined(separator: ".")
+        // }
         
         elementInfo += "</\(role)>"
     }
