@@ -1,6 +1,7 @@
 import subprocess, os, ctypes
 from typing import Optional, List
 import pyautogui
+import pyperclip
 import time
 
 class Executor:
@@ -28,8 +29,16 @@ class Executor:
         return self.lib.clickElement(ctypes.c_int32(element_id))
     # action 3
     def type(self, text: str) -> bool:
-        pyautogui.write(text)
-        print("✅ typed text:", text)
+        original_clipboard = pyperclip.paste() # pyautogui.write(text)
+        try:
+            pyperclip.copy(text)
+            pyautogui.keyDown('command')
+            pyautogui.press('v')
+            pyautogui.keyUp('command')
+            time.sleep(0.1)
+        finally:
+            pyperclip.copy(original_clipboard)
+        print("✅ typed text fast:", text)
         return True
     # action 4
     def hotkey(self, keys: List[str]) -> bool:

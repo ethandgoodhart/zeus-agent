@@ -64,7 +64,7 @@ COMMON APP BUNDLE IDs:
 - Chrome: "com.google.Chrome"
 - iMovie: "com.apple.iMovie"
 - Canary Mail: "io.canarymail.mac"
-- YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C"
+- YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C" (pause button means song is playing)
 """
 
 def format_prompt(dom_string, past_actions, task):
