@@ -218,57 +218,54 @@ public func domToString(some_dom: [Int: DOMElement]) -> String {
     // Track clickable elements for summary
     var clickableElements: [(id: Int, info: String)] = []
     
-    // Only get DOM if not our own app
-    if bundleId != "dev.ethan.flow" {
-        context += "#### MacOS app elements (emmet notation):\n"
+    context += "#### MacOS app elements (emmet notation):\n"
+    
+    func buildHierarchicalString(_ elementId: Int, _ dom: [Int: DOMElement]) -> String {
+        guard let element = dom[elementId] else { return "" }
         
-        func buildHierarchicalString(_ elementId: Int, _ dom: [Int: DOMElement]) -> String {
-            guard let element = dom[elementId] else { return "" }
-            
-            // Get the emmet representation for this element
-            var result = getElementInfo(element: element)
-            
-            // Track clickable elements
-            if element.isClickable, let clickableId = element.clickableId {
-                clickableElements.append((id: clickableId, info: result))
-            }
-            
-            // Process children
-            if !element.children.isEmpty {
-                // Use ">" for first child and "+" for siblings
-                let childStrings = element.children.map { childId -> String in
-                    buildHierarchicalString(childId, dom)
-                }
-                
-                // Combine children with proper operators
-                if !childStrings.isEmpty {
-                    let childrenString = childStrings.joined(separator: "+")
-                    result += ">" + childrenString
-                }
-            }
-            
-            return result
+        // Get the emmet representation for this element
+        var result = getElementInfo(element: element)
+        
+        // Track clickable elements
+        if element.isClickable, let clickableId = element.clickableId {
+            clickableElements.append((id: clickableId, info: result))
         }
         
-        // Find root elements (those without parents in our DOM)
-        let rootElements = some_dom.filter { (_, element) in
-            !some_dom.values.contains { $0.children.contains(element.id) }
-        }.map { $0.key }.sorted()
-        
-        // Process each root element and join them with newlines
-        for (index, rootId) in rootElements.enumerated() {
-            context += buildHierarchicalString(rootId, some_dom)
-            if index < rootElements.count - 1 {
-                context += "\n"
+        // Process children
+        if !element.children.isEmpty {
+            // Use ">" for first child and "+" for siblings
+            let childStrings = element.children.map { childId -> String in
+                buildHierarchicalString(childId, dom)
+            }
+            
+            // Combine children with proper operators
+            if !childStrings.isEmpty {
+                let childrenString = childStrings.joined(separator: "+")
+                result += ">" + childrenString
             }
         }
         
-        // Add a clear summary of all clickable elements
-        if !clickableElements.isEmpty {
-            context += "\n\n### CLICKABLE ELEMENTS:\n"
-            for element in clickableElements.sorted(by: { $0.id < $1.id }) {
-                context += "ID=\(element.id): \(element.info)\n"
-            }
+        return result
+    }
+    
+    // Find root elements (those without parents in our DOM)
+    let rootElements = some_dom.filter { (_, element) in
+        !some_dom.values.contains { $0.children.contains(element.id) }
+    }.map { $0.key }.sorted()
+    
+    // Process each root element and join them with newlines
+    for (index, rootId) in rootElements.enumerated() {
+        context += buildHierarchicalString(rootId, some_dom)
+        if index < rootElements.count - 1 {
+            context += "\n"
+        }
+    }
+    
+    // Add a clear summary of all clickable elements
+    if !clickableElements.isEmpty {
+        context += "\n\n### CLICKABLE ELEMENTS:\n"
+        for element in clickableElements.sorted(by: { $0.id < $1.id }) {
+            context += "ID=\(element.id): \(element.info)\n"
         }
     }
 

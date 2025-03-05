@@ -8,8 +8,8 @@ import json
 import os
 
 executor = executor.Executor()
-print("\033[92mFlow - agent running...\033[0m\n")
-system_prompt = """You are Flow, a macOS automation assistant designed to complete user tasks through precise UI interactions.
+print("\033[Zeus - agent running...\033[0m\n")
+system_prompt = """You are Zeus, a macOS automation assistant designed to complete user tasks through precise UI interactions.
 
 YOUR ROLE:
 - You control macOS by clicking UI elements and using keyboard commands

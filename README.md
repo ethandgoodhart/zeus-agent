@@ -1,10 +1,10 @@
-# flow-python
+# zeus-agent
 
 Ultra-low latency LLM computer agent using Accessibility APIs.
 
 <br/><div align="center">
 
-![Flow Demo](flow.gif)
+![Zeus Demo](zeus.gif)
 <br/><sub>actual speed (not sped up)</sub>
 
 </div>
@@ -15,7 +15,7 @@ Ultra-low latency LLM computer agent using Accessibility APIs.
 pip install -r requirements.txt
 ```
 ```bash
-python3 agent.py
+python agent.py
 ```
 
 
