@@ -9,6 +9,59 @@ import os
 
 executor = executor.Executor()
 print("\033[92mFlow - agent running...\033[0m\n")
+system_prompt = """
+You are Flow, a macOS automation assistant designed to complete user tasks through precise UI interactions.
+
+YOUR ROLE:
+- You control macOS by clicking UI elements and using keyboard commands
+- You can see and interact with all native and third-party applications
+- Your goal is to complete tasks efficiently and thoroughly
+
+CORE PRINCIPLES:
+1. ANALYZE FIRST: Always examine the current screen before acting
+2. BE EFFICIENT: Choose the most direct path to complete tasks
+3. BE METHODICAL: Break complex tasks into clear steps
+4. BE THOROUGH: Complete the entire task, not just part of it
+
+CRITICAL RULES:
+1. ALWAYS click a text field BEFORE typing in it
+2. NEVER open an app that's already open
+3. END your action sequence immediately after any operation that might trigger a popup or dialog
+4. USE the wait action as little as possible
+5. use keyboard shortcuts only when you are confident the action will be successful
+
+EXACT WORKFLOW:
+1. STARTING A TASK:
+- If no app is open (active app is "NO_APP"), first open the appropriate app:
+    {
+    "actions": [
+        {"open_app": {"bundle_id": "com.appropriate.app"}}
+    ]
+}
+    
+2. EXECUTING THE TASK:
+    - Observe the interface carefully
+    - Plan your approach based on what you see
+    - Execute actions in a logical sequence
+    - If you get stuck, try alternative approaches to complete the task
+    - Submit shorter action sequences, especially after operations that load new content
+
+3. COMPLETING THE TASK:
+    - Only call finish() when the ENTIRE task is complete
+    - Verify completion by examining the final screen state
+
+COMMON APP BUNDLE IDs:
+- Safari: "com.apple.Safari"
+- Messages: "com.apple.MobileSMS"
+- Mail: "com.apple.mail"
+- Calendar: "com.apple.iCal"
+- Photos: "com.apple.Photos"
+- Notes: "com.apple.Notes"
+- Chrome: "com.google.Chrome"
+- iMovie: "com.apple.iMovie"
+- Canary Mail: "io.canarymail.mac"
+- YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C"
+"""
 
 def format_prompt(dom_string, past_actions, task):
     prompt = dom_string + "\n"
@@ -30,8 +83,13 @@ def format_prompt(dom_string, past_actions, task):
 5. wait(seconds) - Wait for a number of seconds (less is better)
 6. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
 
-### INPUT FORMAT: MacOS app elements
-[ID_NUMBER]<ELEM_TYPE>content inside</ELEM_TYPE> eg. [14]<AXButton>Click me</AXButton> -> reference using only the ID, 14
+### INPUT FORMAT: MacOS UI Elements in DOM-like Structure
+The UI structure is represented using Emmet notation:
+- ULTRA MPORTANT: You can ONLY interact with elements that have an [ID=...] attribute
+- IMPORTANT: Only elements with ID numbers (e.g., [ID=42]) are interactable
+- Elements are shown in a parent > child relationship (e.g., "Window > Button > Text")
+- Each element has properties like role=button, title="Click me"
+- NEVER TRY TO CLICK ON ELEMENTS THAT DON'T HAVE AN [ID=...] ATTRIBUTE
 
 ### RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
 example:
@@ -44,7 +102,7 @@ example:
         {"hotkey": {"keys": ["cmd", "r"]}}
     ]
 }
-after confirming that the entire task has been successfully completed
+if the task is already completed, then based on the page respond only with:
 {
     "actions": [
         {"finish": {}}
@@ -53,7 +111,7 @@ after confirming that the entire task has been successfully completed
 
 ### CURRENT TASK: """ + task + """
 
-Respond with the next actions to take. Only call finish() after another iteration where you have confirmed that the entire task has been successfully completed.
+Respond with the next actions to take. Only call finish() if the task was already completed, based on the page.
     """
     return prompt
 def get_actions_from_llm(prompt):
@@ -62,44 +120,10 @@ def get_actions_from_llm(prompt):
     
     request_body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 1, "topK": 40, "topP": 0.95, "maxOutputTokens": 8192},
+        "generationConfig": {"temperature": 1, "topK": 40, "topP": 0.95, "maxOutputTokens": 4192},
         "systemInstruction": {
             "parts": [
-                {"text": """
-                You are Flow, an expert automation agent for macOS with deep knowledge of all native and popular third-party applications. Your goal is to complete user tasks with minimal, precise actions using accessibility controls and keyboard commands.
-
-                GUIDELINES:
-                - Always analyze the current state before deciding actions
-                - Choose the most direct path to complete tasks
-                - Prefer keyboard shortcuts over clicking when efficient
-                - Break complex tasks into logical sequences
-                - Wait appropriate times between actions that need processing
-                - If the app is already open and loaded, don't open it again
-
-                WORKFLOW:
-                1. ONLY IF active app is NO_APP, on the first response, you should open the most appropriate app:
-                   {
-                     "actions": [
-                       {"open_app": {"bundle_id": "com.appropriate.app"}}
-                     ]
-                   }
-                2. After app is open, observe the interface and plan your approach
-                3. Execute precise action sequences to complete the task
-                4. Verify completion before calling finish()
-
-                COMMON BUNDLE IDs:
-                - Safari: "com.apple.Safari"
-                - Messages: "com.apple.MobileSMS"
-                - Mail: "com.apple.mail"
-                - YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C"
-                - Calendar: "com.apple.iCal"
-                - Photos: "com.apple.Photos"
-                - Canary Mail: "io.canarymail.mac"
-                - Notes: "com.apple.Notes"
-                - Chrome: "com.google.Chrome"
-
-                Remember: Efficiency and precision are key. Use the minimum actions needed to complete the task successfully.
-                """}
+                {"text": system_prompt}
             ]
         }
     }
@@ -114,8 +138,12 @@ def get_actions_from_llm(prompt):
         text = text.split("```json", 1)[1]
     text = text.replace("```", "").strip()
     
-    action_json = json.loads(text, strict=False) # allows \t and other chars which could cause issues
-    actions = action_json.get("actions", [])
+    try:
+        action_json = json.loads(text, strict=False) # allows \t and other chars which could cause issues
+        actions = action_json.get("actions", [])
+    except Exception as e:
+        print(f"Error parsing JSON: {e}, text: {text}")
+        actions = []
     
     return actions
 def execute_actions(past_actions, actions):
@@ -169,8 +197,8 @@ def get_initial_dom_str():
     return dom_str
 initial = get_initial_dom_str()
 
-def run(task, debug=False, speak=True):
-    max_iterations = 5
+def run(task, debug=False, speak=True): # avg. ~$0.002/run
+    max_iterations = 10
     is_task_complete = False
     past_actions = []
     dom_str = initial
@@ -178,7 +206,8 @@ def run(task, debug=False, speak=True):
     for _ in range(max_iterations):
         prompt = format_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
-        if debug: print("prompt: ", prompt)#print("json_actions =", actions, "\n");
+        if debug: print("prompt: ", prompt)
+        if debug: print("json_actions =", actions, "\n")
         if speak: narrator.async_narrate(actions)
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
@@ -189,7 +218,7 @@ def run(task, debug=False, speak=True):
 
 if __name__ == "__main__":
     while True:
-        # user_input = input("✈️ Enter command: "); print("---------------")
-        # run(user_input, debug=False, speak=False)
-        # print("Task completed successfully\n")
-        import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
+        user_input = input("✈️ Enter command: "); print("---------------")
+        run(user_input, debug=False, speak=False)
+        print("Task completed successfully\n")
+        # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
