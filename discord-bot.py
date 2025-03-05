@@ -17,6 +17,19 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = 1345727973550067802
 
+AUTHORIZED_USER_ID = input("Enter your Discord ID so we can ensure that only you can control your screen(instructions below):\n"
+                           "1️⃣ Open Discord\n"
+                           "2️⃣ Click on 'User Settings' (⚙️ icon)\n"
+                           "3️⃣ Go to 'Advanced' and enable 'Developer Mode'\n"
+                           "4️⃣ Right-click your server profile and select 'Copy ID'\n"
+                           "5️⃣ Paste it here: ").strip()
+
+try:
+    AUTHORIZED_USER_ID = int(AUTHORIZED_USER_ID)  # Convert to integer
+except ValueError:
+    print("❌ Invalid Discord ID! Please enter a numeric ID.")
+    exit(1)
+
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -39,7 +52,7 @@ class AppView(View):
 
     def create_callback(self, message):
         async def callback(interaction: discord.Interaction):
-            await interaction.response.defer()  # Acknowledge the interaction
+            await interaction.response.defer()
             logger.info(f"Processing button click for: {message}")
             response = agent.run(message, debug=False, speak=False)
             await interaction.followup.send(response, ephemeral=False)
@@ -47,7 +60,7 @@ class AppView(View):
 
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user}")# Get speech as a single command
+    print(f"✅ Logged in as {bot.user}")
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
@@ -98,9 +111,12 @@ async def on_message(message: discord.Message):
     # Ignore messages from self or other bots to prevent infinite loops.
     if message.author.bot or message.content.startswith("!"):
         return
-
-    # Process the message with the agent you wrote
-    # Open up the agent.py file to customize the agent
+    
+    # check if user is the correct one prevent others from controlling your screen
+    if message.author.id != AUTHORIZED_USER_ID:
+        await message.reply("❌ You are not authorized to control this bot.")
+        return
+    
     logger.info(f"Processing message from {message.author}: {message.content}")
     response = agent.run(message.content, debug=False, speak=False)
 
