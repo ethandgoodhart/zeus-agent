@@ -23,7 +23,7 @@ def start_sesame(playwright: Playwright):
     # Create page and navigate
     page = context.new_page()
     page.goto("https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice#demo")
-    page.wait_for_load_state("networkidle").
+    page.wait_for_load_state("networkidle")
     
     # Wait for page to load...
     time.sleep(1)
