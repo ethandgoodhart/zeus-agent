@@ -23,9 +23,10 @@ def start_sesame(playwright: Playwright):
     # Create page and navigate
     page = context.new_page()
     page.goto("https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice#demo")
+    page.wait_for_load_state("networkidle").
     
-    # Wait for page to load. Don't really need this though.
-    # time.sleep(1)
+    # Wait for page to load...
+    time.sleep(1)
     
     # Injection of JavaScript ensures BlackHole 2ch is selected
     page.evaluate("""() => {
@@ -87,7 +88,7 @@ def start_sesame(playwright: Playwright):
     
     # Click Maya button
     try:
-        page.click("[data-testid='maya-button']")
+        page.click("button[data-testid='maya-button']")
     except:
         print("Couldn't find maya-button, continuing anyway")
     
