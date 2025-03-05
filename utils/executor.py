@@ -28,8 +28,10 @@ class Executor:
     def click_element(self, element_id: int) -> bool:
         return self.lib.clickElement(ctypes.c_int32(element_id))
     # action 3
-    def type(self, text: str) -> bool:
-        original_clipboard = pyperclip.paste() # pyautogui.write(text)
+    def type_in_element(self, element_id: int, text: str) -> bool:
+        if not self.lib.clickElement(ctypes.c_int32(element_id)): # activate element first
+            return False
+        original_clipboard = pyperclip.paste() # was pyautogui.write(text)
         try:
             pyperclip.copy(text)
             pyautogui.keyDown('command')

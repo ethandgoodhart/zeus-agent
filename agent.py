@@ -23,11 +23,10 @@ CORE PRINCIPLES:
 4. BE THOROUGH: Complete the entire task, not just part of it
 
 CRITICAL RULES:
-1. ALWAYS click a text field BEFORE typing in it
-2. NEVER open an app that's already open
-3. END your action sequence immediately after any operation that might trigger a popup or dialog
-4. USE the wait action as little as possible
-5. use keyboard shortcuts only when you are confident the action will be successful
+1. NEVER open an app that's already open
+2. END your action sequence immediately after any operation that might trigger a popup or dialog
+3. USE the wait action as little as possible
+4. use keyboard shortcuts only when you are confident the action will be successful
 
 EXACT WORKFLOW:
 1. STARTING A TASK:
@@ -42,7 +41,7 @@ EXACT WORKFLOW:
   - Observe the interface carefully
   - Plan your approach based on what you see
   - Execute actions in a logical sequence
-  - If you get stuck, try alternative approaches to complete the task
+  - If you get stuck, try a different approach
 
 3. COMPLETING THE TASK:
   - Only call finish() after the ENTIRE task is complete
@@ -72,7 +71,7 @@ def format_prompt(dom_string, past_actions, task):
     
     prompt += "### ACTIONS TAKEN SO FAR:\n"
     if not past_actions:
-        prompt += "none"
+        prompt += "none\n"
     else:
         for i, action in enumerate(past_actions):
             prompt += f"{i + 1}. {action}\n"
@@ -82,30 +81,13 @@ def format_prompt(dom_string, past_actions, task):
 ### ACTIONS AVAILABLE
 1. open_app(bundle_id) - Open app
 2. click_element(id) - Click on element
-3. type(text) - Type text at current cursor position
+3. type_in_element(id, text) - Type text into element
 4. hotkey(keys) - Execute keyboard shortcuts as a list of keys, e.g. ["cmd", "s"] or ["enter"]
 5. wait(seconds) - Wait for a number of seconds (less is better)
 6. finish() - Only call in final block after executing all actions, when the entire task has been successfully completed
 
-### INPUT FORMAT: MacOS UI Elements in DOM-like Structure
-The UI structure is presented in a hierarchical format:
-
-1. **INTERACTABLE ELEMENTS**
-   - ⚠️ **CRITICAL**: You can ONLY interact with elements that have an [ID=...] attribute
-   - ⚠️ **CRITICAL**: Only elements with numeric IDs (e.g., [ID=42]) can be clicked or manipulated
-
-2. **ELEMENT HIERARCHY**
-   - Elements follow a parent > child relationship structure
-   - Example: "Window > Button > Text" shows nesting and relationships
-
-3. **ELEMENT PROPERTIES**
-   - Elements have descriptive attributes: role, title, etc.
-   - Example: role=button, title="Click me"
-
-4. **SELECTION GUIDELINES**
-   - ❌ NEVER attempt to interact with elements without an [ID=...] attribute
-   - ✅ Prioritize elements with clear, descriptive attributes over empty/generic elements
-   - ✅ Choose elements whose purpose is clearly indicated by their attributes
+### INPUT FORMAT: MacOS app elements
+[ID_NUMBER]<ELEM_TYPE>content inside</ELEM_TYPE> eg. [14]<AXButton>Click me</AXButton> -> reference using only the ID, 14
 
 ### RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
 example:
@@ -114,8 +96,8 @@ example:
         {"open_app": {"bundle_id": "bundle.id.forapp"}},
         {"click_element": {"id": 1}},
         {"wait": {"seconds": 1}},
-        {"type": {"text": "new text"}},
-        {"hotkey": {"keys": ["cmd", "r"]}}
+        {"type_in_element": {"id": 7, "text": "new text"}},
+        {"hotkey": {"keys": ["cmd", "t"]}}
     ]
 }
 if the task is already completed, then based on the page respond only with:
@@ -153,7 +135,11 @@ def get_actions_from_llm(prompt):
     if "```json" in text:
         text = text.split("```json", 1)[1]
     text = text.replace("```", "").strip()
-    
+    if "{" in text and "}" in text:
+        start_idx = text.find("{")
+        end_idx = text.rfind("}") + 1
+        text = text[start_idx:end_idx].strip()
+
     try:
         action_json = json.loads(text, strict=False) # allows \t and other chars which could cause issues
         actions = action_json.get("actions", [])
@@ -177,11 +163,12 @@ def execute_actions(past_actions, actions):
             result = executor.click_element(element_id)
             status = "✅" if result else "❌ [FAILED]"
             updated_actions.append(f"{status} Clicked element: {element_id}")
-        elif "type" in action:
-            text = action["type"]["text"]
-            result = executor.type(text)
+        elif "type_in_element" in action:
+            element_id = action["type_in_element"]["id"]
+            text = action["type_in_element"]["text"]
+            result = executor.type_in_element(element_id, text)
             status = "✅" if result else "❌ [FAILED]"
-            updated_actions.append(f"{status} Typed text: {text}")
+            updated_actions.append(f"{status} Typed text: {text} into element: {element_id}")
         elif "hotkey" in action:
             keys = action["hotkey"]["keys"]
             result = executor.hotkey(keys)
@@ -222,7 +209,6 @@ def run(task, debug=False, speak=True): # avg. ~$0.002/run
     for _ in range(max_iterations):
         prompt = format_prompt(dom_str, past_actions, task)
         actions = get_actions_from_llm(prompt)
-        if debug: print("prompt: ", prompt)
         if debug: print("json_actions =", actions, "\n")
         if speak: narrator.async_narrate(actions)
         is_task_complete, past_actions = execute_actions(past_actions, actions)

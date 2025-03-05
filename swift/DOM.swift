@@ -148,62 +148,56 @@ public func getCurrentDom() -> [Int: DOMElement] {
     return currentDom
 }
 public func getElementInfo(element: DOMElement) -> String {
-    var emmetNotation = ""
+    var elementInfo = ""
     
-    // Get the normalized element role (using lowercase to match HTML conventions)
-    let normalizedRole = element.role.replacingOccurrences(of: "AX", with: "").lowercased()
-    
-    // Add element tag
-    emmetNotation += normalizedRole
-    
-    // Add clickable ID marker if applicable
-    if element.isClickable {
-        emmetNotation += "[ID=\(element.clickableId!)]"
+    // Only process clickable elements
+    if element.isClickable, let clickableId = element.clickableId {
+        // Get the normalized element role
+        let role = element.role //.replacingOccurrences(of: "AX", with: "")
+        
+        elementInfo = "[\(clickableId)]<\(role)>"
+        
+        // Add attributes
+        var titleValue: AnyObject?
+        AXUIElementCopyAttributeValue(element.uielem, kAXTitleAttribute as CFString, &titleValue)
+        let title = titleValue as? String ?? ""
+        if !title.isEmpty {
+            elementInfo += title
+        }
+        
+        var descValue: AnyObject?
+        AXUIElementCopyAttributeValue(element.uielem, kAXDescriptionAttribute as CFString, &descValue)
+        let description = descValue as? String ?? ""
+        if !description.isEmpty {
+            elementInfo += description
+        }
+        
+        var valueAttr: AnyObject?
+        AXUIElementCopyAttributeValue(element.uielem, kAXValueAttribute as CFString, &valueAttr)
+        let value = valueAttr as? String ?? ""
+        if !value.isEmpty {
+            elementInfo += value
+        }
+        
+        var placeholderValue: AnyObject?
+        AXUIElementCopyAttributeValue(element.uielem, kAXPlaceholderValueAttribute as CFString, &placeholderValue)
+        let placeholder = placeholderValue as? String ?? ""
+        if !placeholder.isEmpty {
+            elementInfo += placeholder
+        }
+        
+        // Get text content
+        var textValue: AnyObject?
+        AXUIElementCopyAttributeValue(element.uielem, kAXTextAttribute as CFString, &textValue)
+        let text = textValue as? String ?? ""
+        if !text.isEmpty {
+            elementInfo += text
+        }
+        
+        elementInfo += "</\(role)>"
     }
     
-    // Get element attributes for display
-    // var domClassListRef: CFTypeRef?
-    // AXUIElementCopyAttributeValue(element.uielem, "AXDOMClassList" as CFString, &domClassListRef)
-    // let classList = domClassListRef as? [String] ?? []
-    // if !classList.isEmpty {
-    //     emmetNotation += "." + classList.joined(separator: ".")
-    // }
-
-    // Add other important attributes
-    var titleValue: AnyObject?
-    AXUIElementCopyAttributeValue(element.uielem, kAXTitleAttribute as CFString, &titleValue)
-    if let title = titleValue as? String, !title.isEmpty {
-        emmetNotation += "[title=\"\(title.replacingOccurrences(of: "\"", with: "\\\""))\"]"
-    }
-    
-    var valueAttr: AnyObject?
-    AXUIElementCopyAttributeValue(element.uielem, kAXValueAttribute as CFString, &valueAttr)
-    if let value = valueAttr as? String, !value.isEmpty {
-        emmetNotation += "[value=\"\(value.replacingOccurrences(of: "\"", with: "\\\""))\"]"
-    }
-    
-    var placeholderValue: AnyObject?
-    AXUIElementCopyAttributeValue(element.uielem, kAXPlaceholderValueAttribute as CFString, &placeholderValue)
-    if let placeholder = placeholderValue as? String, !placeholder.isEmpty {
-        emmetNotation += "[placeholder=\"\(placeholder.replacingOccurrences(of: "\"", with: "\\\""))\"]"
-    }
-    
-    // Get text content
-    var textValue: AnyObject?
-    AXUIElementCopyAttributeValue(element.uielem, kAXTextAttribute as CFString, &textValue)
-    let text = textValue as? String ?? ""
-    
-    var descValue: AnyObject?
-    AXUIElementCopyAttributeValue(element.uielem, kAXDescriptionAttribute as CFString, &descValue)
-    let description = descValue as? String ?? ""
-    
-    // If we have text content, add it with curly braces
-    let combinedText = [text, description].filter { !$0.isEmpty }.joined(separator: " ")
-    if !combinedText.isEmpty {
-        emmetNotation += "{\(combinedText)}"
-    }
-    
-    return emmetNotation
+    return elementInfo
 }
 
 public func domToString(some_dom: [Int: DOMElement]) -> String {
@@ -215,60 +209,18 @@ public func domToString(some_dom: [Int: DOMElement]) -> String {
     let bundleId = frontAppInfo[2]
     context += "### Active app: \(appName) (\(bundleId))\n"
     
-    // Track clickable elements for summary
-    var clickableElements: [(id: Int, info: String)] = []
+    context += "#### MacOS app elements:\n"
     
-    context += "#### MacOS app elements (emmet notation):\n"
+    // Only collect clickable elements
+    let clickableElements = some_dom.values.filter { $0.isClickable }.sorted { $0.clickableId ?? 0 < $1.clickableId ?? 0 }
     
-    func buildHierarchicalString(_ elementId: Int, _ dom: [Int: DOMElement]) -> String {
-        guard let element = dom[elementId] else { return "" }
-        
-        // Get the emmet representation for this element
-        var result = getElementInfo(element: element)
-        
-        // Track clickable elements
-        if element.isClickable, let clickableId = element.clickableId {
-            clickableElements.append((id: clickableId, info: result))
-        }
-        
-        // Process children
-        if !element.children.isEmpty {
-            // Use ">" for first child and "+" for siblings
-            let childStrings = element.children.map { childId -> String in
-                buildHierarchicalString(childId, dom)
-            }
-            
-            // Combine children with proper operators
-            if !childStrings.isEmpty {
-                let childrenString = childStrings.joined(separator: "+")
-                result += ">" + childrenString
-            }
-        }
-        
-        return result
-    }
-    
-    // Find root elements (those without parents in our DOM)
-    let rootElements = some_dom.filter { (_, element) in
-        !some_dom.values.contains { $0.children.contains(element.id) }
-    }.map { $0.key }.sorted()
-    
-    // Process each root element and join them with newlines
-    for (index, rootId) in rootElements.enumerated() {
-        context += buildHierarchicalString(rootId, some_dom)
-        if index < rootElements.count - 1 {
-            context += "\n"
+    for element in clickableElements {
+        let info = getElementInfo(element: element)
+        if !info.isEmpty {
+            context += info + "\n"
         }
     }
     
-    // Add a clear summary of all clickable elements
-    if !clickableElements.isEmpty {
-        context += "\n\n### CLICKABLE ELEMENTS:\n"
-        for element in clickableElements.sorted(by: { $0.id < $1.id }) {
-            context += "ID=\(element.id): \(element.info)\n"
-        }
-    }
-
     context += "\n\n### Active app bundleids:\n"
     var uniqueBundleIds = Set<String>()    
     for app in workspace.runningApplications {
