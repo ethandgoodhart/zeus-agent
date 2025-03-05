@@ -199,10 +199,15 @@ public func getElementInfo(element: DOMElement) -> String {
         // if !classList.isEmpty {
         //     emmetNotation += "." + classList.joined(separator: ".")
         // }
-        
+
+        // Check if this is an empty AXGroup element
+        if role == "AXGroup" && title.isEmpty && description.isEmpty && value.isEmpty && placeholder.isEmpty && text.isEmpty {
+            return ""
+        }
+
         elementInfo += "</\(role)>"
     }
-    
+
     return elementInfo
 }
 
