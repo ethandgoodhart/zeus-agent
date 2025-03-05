@@ -1,34 +1,17 @@
-from playwright.sync_api import Playwright, sync_playwright, expect
-import os
+from playwright.sync_api import Playwright, sync_playwright
 import time
 
 def start_sesame(playwright: Playwright):
-    # Launch browser with audio congif
-    browser = playwright.chromium.launch(
-        headless=False, 
-        ignore_default_args=["--mute-audio"],
-        args=[
-            "--no-sandbox", 
-            "--allow-file-access-from-files", 
-            "--use-fake-ui-for-media-stream",
-            # Specify BlackHole 2ch as the audio source
-            "--use-file-for-fake-audio-capture=BlackHole 2ch"
-        ]
-    )
-    
-    # Set up context with permissions
+    browser = playwright.chromium.launch(headless=False)
     context = browser.new_context()
-    context.grant_permissions(permissions=["microphone"])
-    
-    # Create page and navigate
     page = context.new_page()
+    
+    # Navigate to the page
     page.goto("https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice#demo")
-    page.wait_for_load_state("networkidle").
+    page.wait_for_load_state("networkidle")
     
-    # Wait for page to load...
-    time.sleep(1)
+    time.sleep(2)  # Allow extra time for elements to load
     
-    # Injection of JavaScript ensures BlackHole 2ch is selected
     page.evaluate("""() => {
         if (navigator.mediaDevices) {
             // Store the original methods
@@ -85,18 +68,20 @@ def start_sesame(playwright: Playwright):
             };
         }
     }""")
+    # Target the button using the test ID
+    maya_button_selector = "[data-testid='maya-button']"
     
-    # Click Maya button
     try:
-        page.click("button[data-testid='maya-button']")
-    except:
-        print("Couldn't find maya-button, continuing anyway")
-    
-    # Pause for debugging/viewing
-    page.pause()
-    
-    # Clean up
-    context.close()
+        maya_button = page.locator(maya_button_selector)
+        if maya_button.count() > 0:
+            print("Found Maya button! Clicking now...")
+            maya_button.first.click()
+        else:
+            print("Couldn't find the Maya button.")
+    except Exception as e:
+        print(f"Error clicking Maya button: {e}")
+
+    page.pause()  # Pause execution to inspect the page
     browser.close()
 
 if __name__ == "__main__":
