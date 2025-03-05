@@ -1,0 +1,7 @@
+- Chess: "com.apple.Chess"
+
+Play as White until you get checkmate. If it's the beginning of the game, open with Nf3.
+Click on only white pieces, then destination square to move.
+PLAY WHATEVER THE BEST VALID MOVE IS BASED ON THE BOARD, AND HOW CHESS PIECES WORK.
+
+Wait 5s for black to move. Repeat until checkmate.

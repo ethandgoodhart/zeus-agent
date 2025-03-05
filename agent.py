@@ -59,7 +59,7 @@ COMMON APP BUNDLE IDs:
 - Calendar: "com.apple.iCal"
 - Photos: "com.apple.Photos"
 - Notes: "com.apple.Notes" (when making a new note, type text into title first, then press enter twice, then enter body text)
-- Chrome: "com.google.Chrome"
+- Chess: "com.apple.Chess" (play as White until you get checkmate. If it's the beginning of the game, open with Nf3. click on only white pieces, then destination square to move. PLAY WHATEVER THE BEST VALID MOVE IS BASED ON THE BOARD, AND HOW CHESS PIECES WORK.  wait 5s for black to move. repeat until checkmate)
 - iMovie: "com.apple.iMovie"
 - Canary Mail: "io.canarymail.mac"
 - YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C" (pause button means song is playing)
