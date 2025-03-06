@@ -227,17 +227,32 @@ def is_file_operation_prompt(prompt):
     Returns:
         bool: True if the prompt likely involves file creation/editing, False otherwise
     """
+    # Core file operation keywords (these are more specific)
     file_operation_keywords = [
         "create file", "make file", "write file", "new file",
         "edit file", "modify file", "update file", "change file",
-        "write to file", "save", "write a", "create a", "build a",
+        "write to file"
+    ]
+    
+    # More general keywords that may indicate file operations, but check with more care
+    general_keywords = [
+        "save", "write a", "create a", "build a", "make a",
         "implement", "code", "script", "program", "develop"
     ]
     
     lower_prompt = prompt.lower()
     
-    # Check for file operation keywords
+    # Check for specific file operation keywords
     for keyword in file_operation_keywords:
+        if keyword in lower_prompt:
+            return True
+    
+    # Check for "make a file" pattern specifically
+    if "make a file" in lower_prompt:
+        return True
+            
+    # Check for more general keywords
+    for keyword in general_keywords:
         if keyword in lower_prompt:
             return True
             
