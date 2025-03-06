@@ -15,4 +15,4 @@ libexecutor.dylib
 
 # seleniumbase
 downloaded_files/
-venv/
+venv/run_claude.sh

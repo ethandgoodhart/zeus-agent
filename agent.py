@@ -6,6 +6,7 @@ import subprocess
 import requests
 import json
 import os
+import re
 
 executor = executor.Executor()
 print("\033[92mFlow - agent running...\033[0m\n")
@@ -58,6 +59,10 @@ Respond with the next actions to take. Only call finish() after another iteratio
     return prompt
 def get_actions_from_llm(prompt):
     api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Error: GEMINI_API_KEY environment variable not found")
+        return [{"finish": {"reason": "API key missing"}}]
+        
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     request_body = {
@@ -104,20 +109,47 @@ def get_actions_from_llm(prompt):
         }
     }
     
-    response = requests.post(url, json=request_body)
-    data = response.json()
-    candidates = data.get("candidates", [])
-    text = candidates[0]["content"]["parts"][0]["text"] if candidates else ""
-    
-    # Clean response
-    if "```json" in text:
-        text = text.split("```json", 1)[1]
-    text = text.replace("```", "").strip()
-    
-    action_json = json.loads(text)
-    actions = action_json.get("actions", [])
-    
-    return actions
+    try:
+        response = requests.post(url, json=request_body)
+        response.raise_for_status()  # Raise exception for bad responses
+        
+        data = response.json()
+        
+        # Debug response if needed
+        if 'error' in data:
+            print(f"API Error: {data['error'].get('message', 'Unknown error')}")
+            return [{"finish": {"reason": f"API error: {data['error'].get('message', 'Unknown error')}"}}]
+            
+        candidates = data.get("candidates", [])
+        if not candidates:
+            print("No candidates returned from API")
+            return [{"finish": {"reason": "No response from API"}}]
+            
+        text = candidates[0]["content"]["parts"][0]["text"]
+        
+        # Clean response
+        if "```json" in text:
+            text = text.split("```json", 1)[1]
+        if "```" in text:
+            text = text.replace("```", "").strip()
+        
+        # Try to parse JSON with error handling
+        try:
+            action_json = json.loads(text)
+            actions = action_json.get("actions", [])
+            return actions
+        except json.JSONDecodeError as e:
+            print(f"JSON Decode Error: {e}")
+            print(f"Raw text received: {text}")
+            # Return a safe default action
+            return [{"finish": {"reason": "Failed to parse response"}}]
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Request Error: {e}")
+        return [{"finish": {"reason": f"Request failed: {str(e)}"}}]
+    except Exception as e:
+        print(f"Unexpected Error: {e}")
+        return [{"finish": {"reason": f"Error: {str(e)}"}}]
 def execute_actions(past_actions, actions):
     updated_actions = past_actions.copy()
     task_completed = False
@@ -185,9 +217,183 @@ def run(task, debug=False, speak=True):
         dom_str = executor.get_dom_str()
     return "\n".join(past_actions)
 
+def is_file_operation_prompt(prompt):
+    """
+    Analyzes the prompt to determine if it's likely to involve file operations.
+    
+    Args:
+        prompt: The prompt to analyze
+        
+    Returns:
+        bool: True if the prompt likely involves file creation/editing, False otherwise
+    """
+    file_operation_keywords = [
+        "create file", "make file", "write file", "new file",
+        "edit file", "modify file", "update file", "change file",
+        "write to file", "save", "write a", "create a", "build a",
+        "implement", "code", "script", "program", "develop"
+    ]
+    
+    lower_prompt = prompt.lower()
+    
+    # Check for file operation keywords
+    for keyword in file_operation_keywords:
+        if keyword in lower_prompt:
+            return True
+            
+    # Check for code file extensions
+    extensions = [".py", ".js", ".html", ".css", ".java", ".cpp", ".c", ".h", ".sh", ".txt", ".md", ".json"]
+    for ext in extensions:
+        if ext in prompt:
+            return True
+            
+    return False
+
+def run_claude_command(prompt: str, handle_permissions: bool = True, directory: str = None, debug: bool = False) -> str:
+    """
+    Executes a Claude command following strict rules:
+    1. For file operations: Only handle initial trust and one file permission prompt with increased wait times
+    2. For other queries: Use the -p flag with NO permission handling
+    
+    Args:
+        prompt: The prompt to send to Claude
+        handle_permissions: Whether to automatically handle permission prompts
+        directory: Optional directory to navigate to before running Claude
+        debug: Whether to print debug information
+    
+    Returns:
+        str: Status message
+    """
+    # Determine if this prompt likely involves file operations
+    is_file_op = is_file_operation_prompt(prompt)
+    
+    # Escape special characters in the prompt for AppleScript
+    escaped_prompt = prompt.replace('"', '\\"').replace("'", "\\'").replace("\\", "\\\\")
+    
+    applescript = f'''
+    tell application "Terminal"
+        activate
+        set newTab to do script ""
+        -- Wait for Terminal to fully load
+        delay 2
+    '''
+    
+    # Add directory navigation if specified
+    if directory:
+        # Escape the directory path for AppleScript
+        escaped_directory = directory.replace('"', '\\"').replace("'", "\\'").replace("\\", "\\\\")
+        applescript += f'''
+        -- Change to the specified directory
+        do script "cd {escaped_directory}" in newTab
+        delay 1
+        '''
+    
+    # Choose between interactive mode and one-shot mode based on the prompt type
+    if is_file_op:
+        # INTERACTIVE MODE with strict permission handling for file operations
+        applescript += '''
+        -- Run Claude in interactive mode
+        do script "claude" in newTab
+        -- Wait for Claude to fully load
+        delay 3
+        
+        -- Handle initial trust permission (first pop-up)
+        delay 2
+        do script "y" in newTab
+        delay 0.5
+        do script "" in newTab  -- Press return
+        delay 2
+        
+        -- Press Enter to acknowledge any initial Claude message
+        do script "" in newTab  -- Press Enter
+        delay 2
+        '''
+        
+        # Type the actual prompt
+        applescript += f'''
+        -- Type the prompt
+        do script "{escaped_prompt}" in newTab
+        delay 1
+        do script "" in newTab  -- Press return
+        
+        -- Increased wait time before handling file permission pop-up
+        delay 8
+        
+        -- Handle file permission pop-up (second pop-up)
+        do script "y" in newTab
+        delay 0.5
+        do script "" in newTab  -- Press return
+        
+        -- No more interaction after this point
+        '''
+    else:
+        # ONE-SHOT MODE for regular queries - NO permission handling
+        applescript += f'''
+        -- Run Claude with -p flag for one-shot execution with no permission handling
+        do script "claude -p \\"{escaped_prompt}\\"" in newTab
+        
+        -- No permission handling for one-shot mode
+        '''
+    
+    applescript += '''
+    end tell
+    '''
+    
+    # Create temporary file for the AppleScript
+    script_path = "/tmp/run_claude.scpt"
+    with open(script_path, "w") as f:
+        f.write(applescript)
+    
+    # Execute the AppleScript
+    try:
+        if debug:
+            mode = "interactive mode (file operations)" if is_file_op else "one-shot mode (-p flag without permission handling)"
+            location = f" in directory: {directory}" if directory else ""
+            print(f"Executing Claude in {mode}{location}")
+        
+        result = subprocess.run(["osascript", script_path], capture_output=True, text=True)
+        
+        if debug:
+            print(f"AppleScript Output: {result.stdout}")
+            if result.stderr:
+                print(f"AppleScript Error: {result.stderr}")
+        
+        # Clean up the temporary file
+        os.remove(script_path)
+        
+        if result.returncode != 0:
+            return f"Error running Claude command: {result.stderr}"
+        
+        return "Claude command executed successfully"
+    except Exception as e:
+        return f"Error running Claude command: {str(e)}"
+
 if __name__ == "__main__":
     while True:
         user_input = input("✈️ Enter command: "); print("---------------")
-        run(user_input, debug=False, speak=False)
+        
+        if user_input.startswith("claude:"):
+            # Extract the entire input after "claude:"
+            claude_input = user_input[7:].strip()
+            
+            # Check for directory specification pattern: "in <directory>: <prompt>"
+            directory_match = re.match(r'in\s+([^:]+):\s*(.*)', claude_input)
+            
+            if directory_match:
+                # Extract directory and the actual prompt
+                directory = directory_match.group(1).strip()
+                prompt = directory_match.group(2).strip()
+                result = run_claude_command(prompt, directory=directory)
+                print(f"Running Claude in directory: {directory}")
+            else:
+                # No directory specified, run normally
+                prompt = claude_input
+                result = run_claude_command(prompt)
+            
+            print(result)
+        else:
+            # Regular flow commands
+            run(user_input, debug=False, speak=False)
+        
         print("Task completed successfully\n")
         # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
