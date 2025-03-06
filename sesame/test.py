@@ -10,7 +10,8 @@ def start_sesame(playwright: Playwright):
     page.goto("https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice#demo")
     page.wait_for_load_state("networkidle")
     
-    time.sleep(2)  # Allow extra time for elements to load
+    context.grant_permissions(['microphone'])
+    
     
     page.evaluate("""() => {
         if (navigator.mediaDevices) {
@@ -57,6 +58,9 @@ def start_sesame(playwright: Playwright):
                             } else {
                                 constraints.audio.deviceId = { exact: blackHoleDevice.deviceId };
                             }
+                            console.log('Successfully set BlackHole 2ch as the audio input device');
+                        } else {
+                            console.error('BlackHole 2ch device not found');
                         }
                     }
                     
@@ -66,8 +70,32 @@ def start_sesame(playwright: Playwright):
                     return await originalGetUserMedia.call(navigator.mediaDevices, constraints);
                 }
             };
+            
+            console.log('Audio device selection overrides installed');
+        } else {
+            console.error('navigator.mediaDevices not available');
         }
     }""")
+    
+    # Verify BlackHole 2ch is available
+    has_blackhole = page.evaluate("""() => {
+        return navigator.mediaDevices.enumerateDevices()
+            .then(devices => {
+                const blackHoleDevice = devices.find(device => 
+                    device.kind === 'audioinput' && device.label.includes('BlackHole 2ch')
+                );
+                return !!blackHoleDevice;
+            })
+            .catch(err => {
+                console.error('Error checking for BlackHole device:', err);
+                return false;
+            });
+    }""")
+    
+    if has_blackhole:
+        print("✅ BlackHole 2ch device found and set as default microphone")
+    else:
+        print("❌ BlackHole 2ch device not found. Please ensure it's properly installed")
     # Target the button using the test ID
     maya_button_selector = "[data-testid='maya-button']"
     
