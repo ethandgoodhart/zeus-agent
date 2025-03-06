@@ -51,6 +51,7 @@ public struct DOMElement {
     var depth: Int
 }
 
+let alwaysClickableTags = ["AXButton", "AXLink", "AXTextField", "AXTextArea", "AXCell"]
 public func getCurrentDom() -> [Int: DOMElement] {
     var currentDom: [Int: DOMElement] = [:]
     let maxElements = 500
@@ -94,9 +95,8 @@ public func getCurrentDom() -> [Int: DOMElement] {
         let isClickable = AXUIElementCopyActionNames(element, &actionsArray) == .success && 
             ((actionsArray as? [String])?.contains(kAXPressAction) == true || 
              (actionsArray as? [String])?.contains(kAXPickAction) == true || 
-             role == "AXTextArea" || 
-             role == "AXTextField" || 
-             role == "AXButton")
+             (actionsArray as? [String])?.contains(kAXConfirmAction) == true ||
+             alwaysClickableTags.contains(role))
         
         // Get parent element
         var parentElement: AXUIElement? = nil
@@ -154,7 +154,7 @@ public func getElementInfo(element: DOMElement) -> String {
     if element.isClickable, let clickableId = element.clickableId {
         // Get the normalized element role
         let role = element.role //.replacingOccurrences(of: "AX", with: "")
-        elementInfo = "[\(clickableId)]<\(role)>"
+        elementInfo = "[\(clickableId)]<\(role)"
         
         // Add attributes
         var titleValue: AnyObject?
@@ -182,7 +182,7 @@ public func getElementInfo(element: DOMElement) -> String {
         AXUIElementCopyAttributeValue(element.uielem, kAXPlaceholderValueAttribute as CFString, &placeholderValue)
         let placeholder = placeholderValue as? String ?? ""
         if !placeholder.isEmpty {
-            elementInfo += placeholder
+            elementInfo += " placeholder=\(placeholder)"
         }
         
         // Get text content
@@ -205,7 +205,7 @@ public func getElementInfo(element: DOMElement) -> String {
             return ""
         }
 
-        elementInfo += "</\(role)>"
+        elementInfo += "></\(role)>"
     }
 
     return elementInfo

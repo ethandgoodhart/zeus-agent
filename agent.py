@@ -9,24 +9,37 @@ import json
 import os
 
 executor = executor.Executor()
-print("\033[92mZeus - agent running...\033[0m\n")
+print("\033[92mZeus - superagent running...\033[0m\n")
 system_prompt = """You are Zeus, a macOS automation assistant designed to complete user tasks through precise UI interactions.
 
 YOUR ROLE:
 - You control macOS by clicking UI elements and using keyboard commands
 - You can see and interact with all native and third-party applications
 - Your goal is to complete tasks efficiently and thoroughly
+- You maintain detailed state awareness throughout multi-step tasks
+
+STATE MANAGEMENT:
+- Always evaluate the success of previous actions
+- Maintain a detailed memory of completed steps and progress
+- Set clear next goals for each action sequence
+- Track progress numerically when tasks involve multiple similar steps (e.g., "3 out of 5 emails processed")
 
 CRITICAL RULES:
 1. NEVER open an app that's already open
 2. END your action sequence immediately after any operation that might trigger a popup or dialog
 3. USE the wait action as little as possible
 4. Use keyboard shortcuts only when you are confident the action will be successful
+5. ALWAYS provide detailed state information with every response
 
 WORKFLOW:
 1. STARTING:
 - If no app is open (active app is "NO_APP"), first open the appropriate app:
 {
+    "current_state": {
+        "evaluation_previous_goal": "Not started yet",
+        "memory": "Task just started, need to open the required application first",
+        "next_goal": "Open the application needed for this task"
+    },
     "actions": [
         {"open_app": {"bundle_id": "com.appropriate.app"}}
     ]
@@ -38,6 +51,11 @@ WORKFLOW:
 - Adapt to what you see on screen while following the general plan
 - Example for "Click on 'Playlists' in the sidebar":
 {
+    "current_state": {
+        "evaluation_previous_goal": "Success - Application opened successfully",
+        "memory": "App is now open and ready for interaction. Next we need to navigate to Playlists",
+        "next_goal": "Click on Playlists in the sidebar to access playlist management"
+    },
     "actions": [
         {"click_element": {"id": 42}}
     ]
@@ -47,6 +65,11 @@ WORKFLOW:
 - Only call finish() when the entire task is complete
 - If the goal has already been completed:
 {
+    "current_state": {
+        "evaluation_previous_goal": "Success - Task has been completed successfully",
+        "memory": "All steps of the task have been completed successfully: [summarize what was done]",
+        "next_goal": "No further actions needed"
+    },
     "actions": [
         {"finish": {}}
     ]
@@ -82,6 +105,11 @@ def format_prompt(dom_string, past_actions, plan_steps, task):
 ### RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
 example:
 {
+    "current_state": {
+        "evaluation_previous_goal": "Success|Failed|Unknown - Analyze the current elements and the image to check if the previous goals/actions are successful like intended by the task. Mention if something unexpected happened. Shortly state why/why not",
+        "memory": "Description of what has been done and what you need to remember. Be very specific. Count here ALWAYS how many times you have done something and how many remain. E.g. 0 out of 10 websites analyzed. Continue with abc and xyz",
+        "next_goal": "What needs to be done with the next immediate action"
+    },
     "actions": [
         {"open_app": {"bundle_id": "bundle.id.forapp"}},
         {"click_element": {"id": 1}},
@@ -92,6 +120,11 @@ example:
 }
 if the goal is already completed, then based on the page respond only with:
 {
+    "current_state": {
+        "evaluation_previous_goal": "Success - Task has been completed successfully",
+        "memory": "All steps of the task have been completed successfully",
+        "next_goal": "No further actions needed"
+    },
     "actions": [
         {"finish": {}}
     ]
@@ -107,7 +140,7 @@ if the goal is already completed, then based on the page respond only with:
         for i, action in enumerate(past_actions):
             prompt += f"{i + 1}. {action}\n\n"
 
-    prompt += """Respond with the next actions to take. Only call finish() if the task was already completed, based on the page."""
+    prompt += """Respond with the next actions to take, including your current state analysis. Only call finish() if the task was already completed, based on the page."""
     return prompt
 def get_actions_from_llm(prompt):
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -138,13 +171,23 @@ def get_actions_from_llm(prompt):
         text = text[start_idx:end_idx].strip()
 
     try:
-        action_json = json.loads(text, strict=False) # allows \t and other chars which could cause issues
-        actions = action_json.get("actions", [])
+        response_json = json.loads(text, strict=False) # allows \t and other chars which could cause issues
+        actions = response_json.get("actions", [])
+        current_state = response_json.get("current_state", {
+            "evaluation_previous_goal": "Unknown",
+            "memory": "No memory available",
+            "next_goal": "No goal specified"
+        })
     except Exception as e:
         print(f"Error parsing JSON: {e}, text: {text}")
         actions = []
+        current_state = {
+            "evaluation_previous_goal": "Unknown",
+            "memory": "No memory available",
+            "next_goal": "No goal specified"
+        }
     
-    return actions
+    return actions, current_state
 def execute_actions(past_actions, actions):
     updated_actions = past_actions.copy()
     task_completed = False
@@ -199,22 +242,50 @@ def get_initial_dom_str():
 initial = get_initial_dom_str()
 
 def run(task, debug=False, speak=True): # avg. ~$0.002/run
-    max_iterations = 10
+    max_iterations = 20
     is_task_complete = False
     past_actions = []
     dom_str = initial
     plan_steps = planner.plan(task)
     print(f"✅ Planned {len(plan_steps)} general steps to accomplish the goal.")
+    
+    # Initialize state tracking
+    current_state = {
+        "evaluation_previous_goal": "Not started",
+        "memory": "Task just started",
+        "next_goal": plan_steps[0] if plan_steps else "No specific steps planned"
+    }
 
-    for _ in range(max_iterations):
+    for iteration in range(max_iterations):
         prompt = format_prompt(dom_str, past_actions, plan_steps, task)
-        actions = get_actions_from_llm(prompt)
-        if debug: print("json_actions =", actions, "\n")
+        actions, new_state = get_actions_from_llm(prompt)
+        
+        # Update state information
+        current_state = new_state
+        
+        if debug: print("json_actions =", actions, "\n", "current_state =", current_state, "\n")    
         if speak: narrator.async_narrate(actions)
+        
+        # Print state information
+        print(f"📝 State Analysis: {current_state['evaluation_previous_goal']}")
+        print(f"🧠 Memory: {current_state['memory']}")
+        print(f"🎯 Next Goal: {current_state['next_goal']}")
+        
         is_task_complete, past_actions = execute_actions(past_actions, actions)
         if is_task_complete: break
         dom_str = executor.get_dom_str()
         print("---------------")
+    
+    # Print final task summary
+    if is_task_complete:
+        print("\n✨ Task Completed Successfully ✨")
+        print(f"📋 Final State: {current_state['evaluation_previous_goal']}")
+        print(f"📝 Summary: {current_state['memory']}")
+    else:
+        print("\n⚠️ Maximum iterations reached without task completion")
+        print(f"📋 Current State: {current_state['evaluation_previous_goal']}")
+        print(f"📝 Progress: {current_state['memory']}")
+        print(f"🔄 Next Step: {current_state['next_goal']}")
         
     return "\n".join(past_actions)
 
@@ -222,5 +293,5 @@ if __name__ == "__main__":
     while True:
         user_input = input("✈️ Enter command: "); print("---------------")
         run(user_input, debug=False, speak=False)
-        print("Task completed successfully\n")
+        print("\n---------------")
         # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging

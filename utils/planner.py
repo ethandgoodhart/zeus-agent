@@ -7,6 +7,8 @@ def plan(task):
     ### GOAL: {task}
     
     Create a detailed step-by-step plan to complete this goal. Break it down into specific, concrete actions.
+    Consider how to effectively track progress and state between actions.
+    Include checkpoints where progress should be evaluated.
     
     Return your plan as a JSON object with this exact format:
     {{
@@ -32,6 +34,7 @@ def plan(task):
             "Right-click on a Mac Miller song and select 'Add to Playlist'",
             "Select the 'Chill' playlist from the dropdown",
             "Repeat steps 8-10 for at least 3 more Mac Miller songs",
+            "Verify that at least 4 Mac Miller songs have been added to the playlist",
             "Go back to the 'Playlists' section",
             "Right-click on the 'Chill' playlist",
             "Select 'Share Playlist' or 'Copy Link'",
@@ -39,11 +42,12 @@ def plan(task):
             "Search for and select 'John' as the recipient",
             "Paste the playlist link in the message field",
             "Add a message like 'Check out this new Chill playlist I made with Mac Miller songs!'",
-            "Click the send button"
+            "Click the send button",
+            "Verify that the message was sent successfully"
         ]
     }}
     
-    Your steps should be specific, actionable instructions that clearly describe what needs to be done. Only include actions that are necessary to complete the goal.
+    Your steps should be specific, actionable instructions that clearly describe what needs to be done. Only include actions that are necessary to complete the goal. Include verification steps where appropriate to confirm progress.
     """
     
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -61,6 +65,8 @@ YOUR ROLE:
 - You control macOS by clicking UI elements and using keyboard commands
 - You can see and interact with all native and third-party applications
 - Your goal is to complete tasks efficiently and thoroughly
+- You maintain detailed state awareness throughout multi-step tasks
+- You break down complex tasks into manageable steps with clear verification points
 """}
             ]
         }
