@@ -1,6 +1,6 @@
-# ⚡ Zeus Agent ⚡
+# 🚀 zeus-agent
 
-🚀 Ultra-low latency LLM computer agent using Accessibility APIs. Control your Mac with AI superpowers!
+Ultra-low latency LLM computer agent using Accessibility APIs. Control your Mac with any LLM.
 
 <br/><div align="center">
 
@@ -9,7 +9,7 @@
 
 </div>
 
-## 🔥 Features
+## 🔥 features
 
 - 🧠 Intelligent task planning and execution
 - ⚡ Lightning-fast response time
@@ -17,21 +17,20 @@
 - 🔄 Real-time DOM analysis of applications
 
 ## 🚀 Getting Started
+### Install
+
+```bash
+pip install -r requirements.txt
+```
+
+### Running
+
+```bash
+python agent.py
+```
 
 ### Prerequisites
 
 - macOS (10.15+)
 - Python 3.8+
 - Gemini API key
-
-### Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-### Usage
-
-```bash
-python agent.py
-```
