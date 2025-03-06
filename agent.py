@@ -264,6 +264,51 @@ def is_file_operation_prompt(prompt):
             
     return False
 
+def is_code_or_claude_related(prompt):
+    """
+    Analyzes the prompt to determine if it's likely related to code or Claude.
+    
+    Args:
+        prompt: The prompt to analyze
+        
+    Returns:
+        bool: True if the prompt likely involves code operations or references Claude
+    """
+    # Check if it's already a file operation (which is code-related)
+    if is_file_operation_prompt(prompt):
+        return True
+        
+    # Additional code-related keywords
+    code_related_keywords = [
+        "function", "algorithm", "programming", "code", "debug", "error", 
+        "syntax", "compile", "variable", "class", "object", "method",
+        "loop", "if statement", "conditional", "array", "list", "dictionary",
+        "api", "database", "sql", "query", "json", "xml", "html", "css",
+        "javascript", "python", "java", "c++", "typescript", "swift", "kotlin",
+        "git", "github", "version control", "pull request", "commit", "merge",
+        "bug", "fix", "issue", "implementation", "developer", "software", "app"
+    ]
+    
+    # Claude-related keywords
+    claude_related_keywords = [
+        "claude", "ai", "assistant", "help me", "can you", "please", "generate", 
+        "write", "create", "explain", "analyze", "solve"
+    ]
+    
+    lower_prompt = prompt.lower()
+    
+    # Check for code-related keywords
+    for keyword in code_related_keywords:
+        if keyword in lower_prompt:
+            return True
+            
+    # Check for Claude-related keywords
+    for keyword in claude_related_keywords:
+        if keyword in lower_prompt:
+            return True
+            
+    return False
+
 def run_claude_command(prompt: str, handle_permissions: bool = True, directory: str = None, debug: bool = False) -> str:
     """
     Executes a Claude command following strict rules:
@@ -404,6 +449,24 @@ if __name__ == "__main__":
                 # No directory specified, run normally
                 prompt = claude_input
                 result = run_claude_command(prompt)
+            
+            print(result)
+        elif is_code_or_claude_related(user_input):
+            # If the input seems code or Claude related but doesn't have the explicit prefix
+            print("This looks like a code or Claude-related query. Running with Claude...")
+            
+            # Check for directory specification pattern without claude: prefix
+            directory_match = re.match(r'in\s+([^:]+):\s*(.*)', user_input)
+            
+            if directory_match:
+                # Extract directory and the actual prompt
+                directory = directory_match.group(1).strip()
+                prompt = directory_match.group(2).strip()
+                result = run_claude_command(prompt, directory=directory)
+                print(f"Running Claude in directory: {directory}")
+            else:
+                # No directory specified, run normally
+                result = run_claude_command(user_input)
             
             print(result)
         else:
