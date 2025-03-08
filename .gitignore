@@ -16,3 +16,6 @@ libexecutor.dylib
 # seleniumbase
 downloaded_files/
 venv/
+
+# discord authentication
+local_auth.json

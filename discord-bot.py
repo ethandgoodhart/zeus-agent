@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 import agent
 import utils.speech as speech
 import asyncio
+import json
+import random
+import string
 
 logger = logging.getLogger(__name__)
 
@@ -17,22 +20,57 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = 1345727973550067802
 
-AUTHORIZED_USER_ID = input("Enter your Discord ID so we can ensure that only you can control your screen(instructions below):\n"
-                           "1️⃣ Open Discord\n"
-                           "2️⃣ Click on 'User Settings' (⚙️ icon)\n"
-                           "3️⃣ Go to 'Advanced' and enable 'Developer Mode'\n"
-                           "4️⃣ Right-click your server profile and select 'Copy ID'\n"
-                           "5️⃣ Paste it here: ").strip()
-
-try:
-    AUTHORIZED_USER_ID = int(AUTHORIZED_USER_ID)  # Convert to integer
-except ValueError:
-    print("❌ Invalid Discord ID! Please enter a numeric ID.")
-    exit(1)
+class LocalUserAuth:
+    def __init__(self, config_file="local_auth.json"):
+        self.config_file = config_file
+        self.authorized_id = None
+        self.auth_code = None
+        self.is_waiting_for_auth = False
+        self.load_config()
+    
+    def load_config(self):
+        """Load authorized user ID from config file if it exists"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                    self.authorized_id = config.get('authorized_id')
+                    return True
+        except Exception as e:
+            print(f"Error loading config: {e}")
+        return False
+    
+    def save_config(self):
+        """Save authorized user ID to config file"""
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump({'authorized_id': self.authorized_id}, f)
+        except Exception as e:
+            print(f"Error saving config: {e}")
+    
+    def generate_auth_code(self):
+        """Generate a random 6-digit auth code"""
+        self.auth_code = ''.join(random.choices(string.digits, k=6))
+        self.is_waiting_for_auth = True
+        return self.auth_code
+    
+    def verify_auth_code(self, user_id, code):
+        """Verify auth code and authorize user if correct"""
+        if self.is_waiting_for_auth and code == self.auth_code:
+            self.authorized_id = str(user_id)
+            self.is_waiting_for_auth = False
+            self.save_config()
+            return True
+        return False
+    
+    def is_authorized(self, user_id):
+        """Check if a user is authorized"""
+        return str(user_id) == self.authorized_id
 
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+auth = LocalUserAuth()  # Create auth instance
 
 class AppView(View):
     def __init__(self):
@@ -52,6 +90,11 @@ class AppView(View):
 
     def create_callback(self, message):
         async def callback(interaction: discord.Interaction):
+            # Check if user is authorized
+            if not auth.is_authorized(str(interaction.user.id)):
+                await interaction.response.send_message("❌ You are not authorized to control this bot.", ephemeral=True)
+                return
+                
             await interaction.response.defer()
             logger.info(f"Processing button click for: {message}")
             response = agent.run(message, debug=False, speak=False)
@@ -61,6 +104,24 @@ class AppView(View):
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
+
+    # If no authorized user is set, generate auth code
+    if not auth.authorized_id:
+        auth_code = auth.generate_auth_code()
+        print("\n" + "="*50)
+        print(f"⚠️ NO AUTHORIZED USER FOUND ⚠️")
+        print(f"One-time authentication code: {auth_code}")
+        print("Send this code to the bot with !auth [code]")
+        print("="*50 + "\n")
+    else:
+        print(f"✅ Authorized user ID: {auth.authorized_id}")
+        
+        # Optionally notify the authorized user
+        try:
+            user = await bot.fetch_user(int(auth.authorized_id))
+            await user.send("I'm now running on your computer and will only accept commands from you.")
+        except Exception as e:
+            print(f"Could not notify authorized user: {e}")
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
@@ -82,6 +143,19 @@ async def on_ready():
     
     bot.loop.create_task(listen_for_commands())
 
+@bot.command(name="auth")
+async def auth_command(ctx, code: str = None):
+    if not code:
+        await ctx.send("Please provide the authentication code: !auth [code]")
+        return
+        
+    if auth.verify_auth_code(ctx.author.id, code):
+        await ctx.send(f"✅ Authentication successful! You ({ctx.author.name}) are now the authorized user.")
+        print(f"User authorized: {ctx.author.name} (ID: {ctx.author.id})")
+    else:
+        # Don't tell unauthorized users that they're unauthorized
+        await ctx.send("❌ Invalid authentication code.")
+
 async def listen_for_commands():
     """Continuously listens for speech and processes commands in parallel."""
     while True:
@@ -96,7 +170,6 @@ async def listen_for_commands():
             
         else:
             print("🔇 No valid command detected. Restarting listener...")
-    
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -112,8 +185,8 @@ async def on_message(message: discord.Message):
     if message.author.bot or message.content.startswith("!"):
         return
     
-    # check if user is the correct one prevent others from controlling your screen
-    if message.author.id != AUTHORIZED_USER_ID:
+    # Check if user is authorized
+    if not auth.is_authorized(str(message.author.id)):
         await message.reply("❌ You are not authorized to control this bot.")
         return
     
@@ -122,6 +195,5 @@ async def on_message(message: discord.Message):
 
     # Send the response back to the channel
     await message.reply(response)
-
 
 bot.run(TOKEN)
