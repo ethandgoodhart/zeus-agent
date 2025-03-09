@@ -159,17 +159,24 @@ async def auth_command(ctx, code: str = None):
 async def listen_for_commands():
     """Continuously listens for speech and processes commands in parallel."""
     while True:
-        print("🎤 Listening for 'Hey Flow'...")
 
         command = await asyncio.to_thread(speech.get_speech_command)  # Run speech recognition in a separate thread
 
         if command:
+            # Clean up the command by removing leading commas and spaces
+            command = command.lstrip(', ')
+            
             print(f"✅ Running command: {command}")
             response = await asyncio.to_thread(agent.run, command, False, False)
             print(f"✅ Task completed: {response}")
             
+            # Send the response to Discord channel
+            channel = bot.get_channel(CHANNEL_ID)
+            if channel:
+                await channel.send(f"Voice command: '{command}'\n\nResults:\n{response}")
+            
         else:
-            print("🔇 No valid command detected. Restarting listener...")
+            print("🔇 Restarting listener...")
 
 @bot.event
 async def on_message(message: discord.Message):

@@ -33,7 +33,7 @@ def is_silent(audio_buffer, threshold=300):
 
 def get_speech_command():
     """Listens for a single speech command, transcribes it, and returns the extracted text."""
-    print("🎤 Listening for 'Hey Flow'...")
+    print("🎤 Listening for 'Hey Zeus'...")
 
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True,
@@ -71,7 +71,7 @@ def get_speech_command():
 
         print(f"🗣️ Detected speech: {full_transcript}")
 
-        trigger_phrases = ["hey flow", "hey flo", "hello flow", "ay flow"]
+        trigger_phrases = ["hey zeus", "hey seuss", "hello zeus", "ay flow"]
         command = None
 
         for phrase in trigger_phrases:
@@ -84,7 +84,7 @@ def get_speech_command():
             print(f"➡️ Running command: {command}")
             return command
         else:
-            print("🔇 'Hey Flow' detected but no valid command extracted.")
+            print("🔇 speech detected but no valid command extracted.")
             return None
 
     except Exception as e:
