@@ -266,48 +266,67 @@ def is_file_operation_prompt(prompt):
 
 def is_code_or_claude_related(prompt):
     """
-    Analyzes the prompt to determine if it's likely related to code or Claude.
+    Analyzes the prompt to determine if it's specifically and clearly related to code or Claude.
+    This function is intentionally restrictive to avoid routing too many general queries to Claude.
     
     Args:
         prompt: The prompt to analyze
         
     Returns:
-        bool: True if the prompt likely involves code operations or references Claude
+        bool: True only if the prompt is highly likely to involve code operations or directly references Claude
     """
-    # Check if it's already a file operation (which is code-related)
-    if is_file_operation_prompt(prompt):
-        return True
-        
-    # Additional code-related keywords
-    code_related_keywords = [
-        "function", "algorithm", "programming", "code", "debug", "error", 
-        "syntax", "compile", "variable", "class", "object", "method",
-        "loop", "if statement", "conditional", "array", "list", "dictionary",
-        "api", "database", "sql", "query", "json", "xml", "html", "css",
-        "javascript", "python", "java", "c++", "typescript", "swift", "kotlin",
-        "git", "github", "version control", "pull request", "commit", "merge",
-        "bug", "fix", "issue", "implementation", "developer", "software", "app"
-    ]
-    
-    # Claude-related keywords
-    claude_related_keywords = [
-        "claude", "ai", "assistant", "help me", "can you", "please", "generate", 
-        "write", "create", "explain", "analyze", "solve"
-    ]
+    # First check for explicit Claude mentions - these are the clearest indicators
+    claude_explicit_mentions = ["claude", "anthropic", "ai assistant"]
     
     lower_prompt = prompt.lower()
     
-    # Check for code-related keywords
-    for keyword in code_related_keywords:
-        if keyword in lower_prompt:
+    for mention in claude_explicit_mentions:
+        if mention in lower_prompt:
             return True
-            
-    # Check for Claude-related keywords
-    for keyword in claude_related_keywords:
-        if keyword in lower_prompt:
-            return True
-            
-    return False
+    
+    # Check for highly specific programming requests (not general terms that might appear in everyday language)
+    specific_code_indicators = [
+        # Programming languages - explicit mentions only
+        "python", "javascript", "typescript", "java ", "c++", "golang", "ruby", "rust", 
+        "swift programming", "kotlin programming", "php code",
+        
+        # Very specific programming concepts
+        "function definition", "class inheritance", "data structures", "algorithm implementation",
+        "runtime complexity", "code review", "debugging", "compiler error", "syntax error",
+        "stack trace", "memory leak", "garbage collection", "unit test", "integration test",
+        
+        # File extensions with programming context
+        ".py file", ".js file", ".ts file", ".cpp file", ".java file", ".html file", ".css file",
+        
+        # Development tools - specific mentions
+        "git commit", "github repository", "pull request", "merge conflict", "docker container",
+        "kubernetes", "api endpoint", "database query", "sql injection",
+        
+        # Code-specific phrases
+        "write code", "debug code", "fix code", "code snippet", "implement algorithm",
+        "programming solution", "software development", "source code"
+    ]
+    
+    # Count how many specific code indicators appear in the prompt
+    code_indicator_count = 0
+    for indicator in specific_code_indicators:
+        if indicator in lower_prompt:
+            code_indicator_count += 1
+    
+    # Check for unambiguous programming commands
+    programming_command_patterns = [
+        "write a function", "create a class", "implement a", "debug this", "fix this code",
+        "how do i code", "help me program", "coding problem", "programming challenge",
+        "software architecture", "web development", "app development"
+    ]
+    
+    for pattern in programming_command_patterns:
+        if pattern in lower_prompt:
+            code_indicator_count += 1
+    
+    # Only return True if multiple specific code indicators are found
+    # or if one of the file operation indicators is triggered
+    return code_indicator_count >= 1 or is_file_operation_prompt(prompt)
 
 def run_claude_command(prompt: str, handle_permissions: bool = True, directory: str = None, debug: bool = False) -> str:
     """
@@ -453,7 +472,8 @@ if __name__ == "__main__":
             print(result)
         elif is_code_or_claude_related(user_input):
             # If the input seems code or Claude related but doesn't have the explicit prefix
-            print("This looks like a code or Claude-related query. Running with Claude...")
+            print("\033[33mDetected code or Claude-specific query.\033[0m")
+            print("\033[33mTip: You can also prefix with 'claude:' for direct Claude access.\033[0m")
             
             # Check for directory specification pattern without claude: prefix
             directory_match = re.match(r'in\s+([^:]+):\s*(.*)', user_input)
