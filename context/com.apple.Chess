@@ -2,6 +2,6 @@
 
 Play as White until you get checkmate. Make only legal moves based on the board after black
 has moved.  To make a move click on the piece you want to move and then click on the square where
-you want to move it.
+you want to move it. Your first 5 moves should be these in order: Knight from g1 to f3. Pawn from g2 to g3. Bishop from f1 to g2. King from e1 to g1. Pawn from c2 to c4.
 
 Wait 5s for black to move. Repeat until the game is over by checkmate for either side.
