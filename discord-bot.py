@@ -13,12 +13,6 @@ import json
 import random
 import string
 
-# Add the parent directory to the path so we can import agent.py
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import the execute_command function from agent.py
-from agent import execute_command
-
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -103,7 +97,7 @@ class AppView(View):
                 
             await interaction.response.defer()
             logger.info(f"Processing button click for: {message}")
-            response = execute_command(message, use_narrator=False, use_maya=True)
+            response = agent.run(message, debug=False, speak=False)
             await interaction.followup.send(response, ephemeral=False)
         return callback
 
@@ -173,7 +167,7 @@ async def listen_for_commands():
             command = command.lstrip(', ')
             
             print(f"✅ Running command: {command}")
-            response = await asyncio.to_thread(execute_command, command, use_narrator=True, use_maya=True)
+            response = await asyncio.to_thread(agent.run, command, False, False)
             print(f"✅ Task completed: {response}")
             
             # Send the response to Discord channel
@@ -204,23 +198,9 @@ async def on_message(message: discord.Message):
         return
     
     logger.info(f"Processing message from {message.author}: {message.content}")
-    response = execute_command(message.content, use_narrator=True, use_maya=True)
+    response = agent.run(message.content, debug=False, speak=False)
 
     # Send the response back to the channel
     await message.reply(response)
-
-@bot.command(name='zeus')
-async def zeus_command(ctx, *, command):
-    """Execute a command with Zeus and Maya"""
-    await ctx.send(f"Zeus is processing: {command}")
-    
-    # Execute the command with both narrator and Maya
-    is_complete, summary, actions_log = execute_command(command, use_narrator=True, use_maya=True)
-    
-    # Send the result back to Discord
-    if is_complete:
-        await ctx.send(f"✅ Command completed successfully: {summary}")
-    else:
-        await ctx.send(f"⚠️ Command not fully completed: {summary}")
 
 bot.run(TOKEN)
