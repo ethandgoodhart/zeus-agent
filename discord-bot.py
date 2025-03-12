@@ -97,7 +97,10 @@ class AppView(View):
                 
             await interaction.response.defer()
             logger.info(f"Processing button click for: {message}")
+            
+            # Button clicks will always use normal run since they're predefined tasks
             response = agent.run(message, debug=False, speak=False)
+            
             await interaction.followup.send(response, ephemeral=False)
         return callback
 
@@ -167,7 +170,16 @@ async def listen_for_commands():
             command = command.lstrip(', ')
             
             print(f"✅ Running command: {command}")
-            response = await asyncio.to_thread(agent.run, command, False, False)
+            
+            # Check if command starts with 'claude' (case insensitive)
+            if command.lower().startswith('claude'):
+                # Use execute_command for Claude-specific functionality
+                is_complete, summary, actions_log = await asyncio.to_thread(agent.execute_command, command, False, False)
+                response = summary
+            else:
+                # Use the original run function for all other commands
+                response = await asyncio.to_thread(agent.run, command, False, False)
+                
             print(f"✅ Task completed: {response}")
             
             # Send the response to Discord channel
@@ -198,7 +210,15 @@ async def on_message(message: discord.Message):
         return
     
     logger.info(f"Processing message from {message.author}: {message.content}")
-    response = agent.run(message.content, debug=False, speak=False)
+    
+    # Check if message starts with 'claude' (case insensitive)
+    if message.content.lower().startswith('claude'):
+        # Use execute_command for Claude-specific functionality
+        is_complete, summary, actions_log = agent.execute_command(message.content, use_narrator=False, use_maya=False)
+        response = summary
+    else:
+        # Use the original run function for all other commands
+        response = agent.run(message.content, debug=False, speak=False)
 
     # Send the response back to the channel
     await message.reply(response)

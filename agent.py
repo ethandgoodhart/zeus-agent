@@ -365,7 +365,8 @@ def execute_command(command, use_narrator=True, use_maya=True):
 if __name__ == "__main__":
     try:
         # Initialize Maya if enabled
-        use_maya = True  # Set this to your preferred default
+        use_maya = False
+          # Set this to your preferred default
         
         if use_maya:
             import time
