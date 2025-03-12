@@ -28,7 +28,7 @@ def async_narrate(actions):
             
             # Create prompt for narration
             actions_text = str(actions)
-            prompt = f"Pretend you're a witty, playful friend watching over someone's shoulder. In ONE short, conversational sentence, describe what this computer agent is doing: {actions_text}. Be casual, use humor, and make it sound like you're narrating a friend's actions. Keep it brief and natural - like you're chatting with a buddy. No explanations or commentary needed!"
+            prompt = f"Pretend you're a witty, playful computer agent exectuting a command given to you by a user. In ONE short, conversational sentence, describe what you, the computer agent, are doing: {actions_text}. Be casual, use humor, and make it sound like you're narrating your own actions. Keep it brief and natural - like you're chatting with a buddy. No explanations or commentary needed!"
             
             # Prepare request
             request_body = {

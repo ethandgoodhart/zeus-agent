@@ -49,6 +49,9 @@ def generate_and_play_audio(text, voice_id="UgBBYS2sOqTuMpoF3BR0", model_id="ele
     
     data, samplerate = sf.read(io.BytesIO(audio_bytes))
     
+    print("⏱️ Waiting for Maya to initialize...")
+    time.sleep(7)  
+    
     print("🔊 Playing audio through BlackHole 2ch...")
     sd.play(data, samplerate, device="BlackHole 2ch")
     

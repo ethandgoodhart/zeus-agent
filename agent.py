@@ -7,6 +7,7 @@ import subprocess
 import requests
 import json
 import os
+import time
 
 executor = executor.Executor()
 print("\033[92mZeus - superagent running...\033[0m\n")
@@ -241,7 +242,7 @@ def get_initial_dom_str():
     return dom_str
 initial = get_initial_dom_str()
 
-def run(task, debug=False, speak=True): # avg. ~$0.002/run
+def run(task, debug=False, speak=True, use_maya=False):
     max_iterations = 20
     is_task_complete = False
     past_actions = []
@@ -256,6 +257,8 @@ def run(task, debug=False, speak=True): # avg. ~$0.002/run
         "next_goal": plan_steps[0] if plan_steps else "No specific steps planned"
     }
 
+    # No need to call announce_task_plan - we're sending the command directly to Maya
+
     for iteration in range(max_iterations):
         prompt = format_prompt(dom_str, past_actions, plan_steps, task)
         actions, new_state = get_actions_from_llm(prompt)
@@ -264,7 +267,10 @@ def run(task, debug=False, speak=True): # avg. ~$0.002/run
         current_state = new_state
         
         if debug: print("json_actions =", actions, "\n", "current_state =", current_state, "\n")    
-        if speak: narrator.async_narrate(actions)
+        
+        # Only use regular narrator for narration
+        if speak:
+            narrator.async_narrate(actions)
         
         # Print state information
         print(f"📝 State Analysis: {current_state['evaluation_previous_goal']}")
@@ -287,11 +293,53 @@ def run(task, debug=False, speak=True): # avg. ~$0.002/run
         print(f"📝 Progress: {current_state['memory']}")
         print(f"🔄 Next Step: {current_state['next_goal']}")
         
-    return "\n".join(past_actions)
+    return is_task_complete, current_state['memory'], "\n".join(past_actions)
 
 if __name__ == "__main__":
-    while True:
-        user_input = input("✈️ Enter command: "); print("---------------")
-        run(user_input, debug=False, speak=False)
-        print("\n---------------")
-        # import time; time.sleep(2); print(format_prompt(executor.get_dom_str(), [], "sample task")); break #dom debugging
+    try:
+        # Initialize Maya if enabled
+        use_maya = True  # Set this to your preferred default
+        
+        if use_maya:
+            import time
+            from agent_maya import maya_agent
+            print("🌐 Initializing Maya voice agent...")
+            
+            # Start Maya and get the event that will be set when the initial greeting is complete
+            greeting_event = maya_agent.start()
+            
+            # Wait for the initial greeting to complete
+            if not maya_agent.wait_for_initial_greeting(timeout=60):
+                print("⚠️ Continuing without waiting for Maya's initial greeting")
+        
+        while True:
+            user_input = input("✈️ Enter command: "); print("---------------")
+            
+            # Send the command to Maya first if enabled
+            if use_maya:
+                from agent_maya import maya_agent
+                maya_agent.process_command(user_input)
+                # Give Maya some time to process and respond
+                time.sleep(2)
+            
+            # Then run the command
+            is_complete, summary, actions_log = run(user_input, debug=False, speak=False, use_maya=use_maya)
+            
+            # Have Maya announce completion and await further commands
+            if use_maya:
+                from agent_maya import maya_agent
+                if is_complete:
+                    maya_agent.say("The command has been executed successfully. Zeus is awaiting further commands.")
+                else:
+                    maya_agent.say("I wasn't able to complete the command fully. Zeus is awaiting further commands.")
+                
+            print("\n---------------")
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        # Stop Maya agent if it was started
+        if use_maya:
+            try:
+                from agent_maya import maya_agent
+                maya_agent.stop()
+            except Exception as e:
+                print(f"Error stopping Maya: {e}")
