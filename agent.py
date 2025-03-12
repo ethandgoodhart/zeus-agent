@@ -8,6 +8,8 @@ import requests
 import json
 import os
 import time
+import re
+import claude_code  # Import the Claude Code module
 
 executor = executor.Executor()
 print("\033[92mZeus - superagent running...\033[0m\n")
@@ -295,10 +297,75 @@ def run(task, debug=False, speak=True, use_maya=False):
         
     return is_task_complete, current_state['memory'], "\n".join(past_actions)
 
+# Function that can be called by external scripts like discord-bot.py
+def execute_command(command, use_narrator=True, use_maya=True):
+    """
+    Execute a command with optional narrator and Maya integration.
+    
+    Args:
+        command: The command to execute
+        use_narrator: Whether to use the narrator for audio feedback
+        use_maya: Whether to use Maya for voice interaction
+        
+    Returns:
+        Tuple of (is_complete, summary, actions_log)
+    """
+    print(f"Executing command: {command}")
+    print("---------------")
+    
+    # Check if this is a direct Claude command with prefix
+    if command.lower().startswith('claude:'):
+        # Handle the command with Claude Code
+        is_complete, summary, actions_log = claude_code.handle_coding_task(command, debug=True)
+        print(f"\n{'✨ Task Completed Successfully ✨' if is_complete else '⚠️ Task could not be completed'}")
+        print(f"📝 Claude Code Status: {summary}")
+        return is_complete, summary, actions_log
+    
+    # Check if this is a coding-related query that should use Claude Code
+    elif claude_code.is_coding_query(command):
+        # Provide a tip about using the claude: prefix for future use
+        print("\033[33mDetected code or Claude-specific query.\033[0m")
+        print("\033[33mTip: You can also prefix with 'claude:' for direct Claude access.\033[0m")
+        
+        # Handle the coding task with Claude Code
+        is_complete, summary, actions_log = claude_code.handle_coding_task(command, debug=True)
+        print(f"\n{'✨ Task Completed Successfully ✨' if is_complete else '⚠️ Task could not be completed'}")
+        print(f"📝 Claude Code Status: {summary}")
+        return is_complete, summary, actions_log
+    
+    # For non-coding tasks, continue with the normal workflow
+    # Initialize Maya if needed and not already running
+    if use_maya:
+        from agent_maya import maya_agent
+        
+        # Check if Maya is initialized
+        if not hasattr(maya_agent, 'is_initialized') or not maya_agent.is_initialized:
+            print("🌐 Initializing Maya voice agent...")
+            greeting_event = maya_agent.start()
+            maya_agent.wait_for_initial_greeting(timeout=60)
+        
+        # Send the command to Maya
+        maya_agent.process_command(command)
+        # Give Maya some time to process and respond
+        time.sleep(2)
+    
+    # Run the command
+    is_complete, summary, actions_log = run(command, debug=False, speak=use_narrator, use_maya=False)
+    
+    # Have Maya announce completion if enabled
+    if use_maya:
+        from agent_maya import maya_agent
+        if is_complete:
+            maya_agent.say("The command has been executed successfully. Zeus is awaiting further commands.")
+        else:
+            maya_agent.say("I wasn't able to complete the command fully. Zeus is awaiting further commands.")
+    
+    return is_complete, summary, actions_log
+
 if __name__ == "__main__":
     try:
         # Initialize Maya if enabled
-        use_maya = False  # Set this to your preferred default
+        use_maya = True  # Set this to your preferred default
         
         if use_maya:
             import time
@@ -315,24 +382,9 @@ if __name__ == "__main__":
         while True:
             user_input = input("✈️ Enter command: "); print("---------------")
             
-            # Send the command to Maya first if enabled
-            if use_maya:
-                from agent_maya import maya_agent
-                maya_agent.process_command(user_input)
-                # Give Maya some time to process and respond
-                time.sleep(2)
+            # Use the execute_command function which now handles Claude Code integration
+            execute_command(user_input, use_narrator=False, use_maya=use_maya)
             
-            # Then run the command
-            is_complete, summary, actions_log = run(user_input, debug=False, speak=True, use_maya=use_maya)
-            
-            # Have Maya announce completion and await further commands
-            if use_maya:
-                from agent_maya import maya_agent
-                if is_complete:
-                    maya_agent.say("The command has been executed successfully. Zeus is awaiting further commands.")
-                else:
-                    maya_agent.say("I wasn't able to complete the command fully. Zeus is awaiting further commands.")
-                
             print("\n---------------")
     except KeyboardInterrupt:
         print("\nShutting down...")
