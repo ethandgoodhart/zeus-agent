@@ -382,9 +382,10 @@ if __name__ == "__main__":
         
         while True:
             user_input = input("✈️ Enter command: "); print("---------------")
-            
+
+
             # Use the execute_command function which now handles Claude Code integration
-            execute_command(user_input, use_narrator=False, use_maya=use_maya)
+            execute_command(user_input, use_narrator=True, use_maya=use_maya)
             
             print("\n---------------")
     except KeyboardInterrupt:

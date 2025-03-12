@@ -45,7 +45,7 @@ def async_narrate(actions):
             # Convert text to speech using the new ElevenLabs client
             audio = client.text_to_speech.convert(
                 text=narration,
-                voice_id="NYC9WEgkq1u4jiqBseQ9",
+                voice_id="s0XGIcqmceN2l7kjsqoZ",
                 model_id="eleven_flash_v2_5",
                 output_format="mp3_44100_128",
             )
