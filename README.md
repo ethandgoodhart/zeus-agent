@@ -37,6 +37,58 @@ python agent.py
 - Gemini API key
 - Claude CLI installed (for coding tasks)
 
+## 🔧 Setting Up Claude Code CLI
+
+Claude Code is Anthropic's command-line interface for coding assistance. Follow these steps to set it up:
+
+### Installation
+
+1. **Install Claude Code CLI**:
+   ```bash
+   pip install claude-cli
+   ```
+
+2. **Log in to your Anthropic account**:
+   ```bash
+   claude login
+   ```
+   This will open a browser window to authenticate with your Anthropic account.
+
+3. **Verify the installation**:
+   ```bash
+   claude --version
+   ```
+
+### Usage
+
+- **Simple query mode**:
+  ```bash
+  claude -p "Write a function to calculate prime numbers"
+  ```
+
+- **Interactive mode** (for file operations):
+  ```bash
+  claude
+  ```
+  Then follow the prompts to enter your coding requests.
+
+### Troubleshooting
+
+- If you encounter permission errors, make sure to run:
+  ```bash
+  chmod +x $(which claude)
+  ```
+
+- If Claude Code CLI is not found in your PATH, add the pip installation directory to your PATH:
+  ```bash
+  export PATH="$HOME/.local/bin:$PATH"
+  ```
+
+### Additional Resources
+
+- [Claude Code CLI Documentation](https://docs.anthropic.com/claude/cli)
+- [Claude API Documentation](https://docs.anthropic.com/claude/docs)
+
 ## 🧑‍💻 Using Claude Code Integration
 
 Zeus can now use Claude Code for coding-related tasks. When you input a query related to coding (like reading files, writing code, or editing files), Zeus will automatically use Claude Code to handle the request.
