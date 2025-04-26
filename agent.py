@@ -10,6 +10,7 @@ import os
 import time
 import re
 import claude_code  # Import the Claude Code module
+import threading
 
 executor = executor.Executor()
 print("\033[92mZeus - superagent running...\033[0m\n")
