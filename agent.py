@@ -336,17 +336,6 @@ def execute_command(command, use_narrator=True, use_maya=True):
         print(f"📝 Claude Code Status: {summary}")
         return is_complete, summary, actions_log
     
-    # Check if this is a coding-related query that should use Claude Code
-    elif claude_code.is_coding_query(command):
-        # Provide a tip about using the claude: prefix for future use
-        print("\033[33mDetected code or Claude-specific query.\033[0m")
-        print("\033[33mTip: You can also prefix with 'claude:' for direct Claude access.\033[0m")
-        
-        # Handle the coding task with Claude Code
-        is_complete, summary, actions_log = claude_code.handle_coding_task(command, debug=True)
-        print(f"\n{'✨ Task Completed Successfully ✨' if is_complete else '⚠️ Task could not be completed'}")
-        print(f"📝 Claude Code Status: {summary}")
-        return is_complete, summary, actions_log
     
     # For non-coding tasks, continue with the normal workflow
     # Initialize Maya if needed and not already running
