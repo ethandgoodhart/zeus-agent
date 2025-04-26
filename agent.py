@@ -253,6 +253,17 @@ def run(task, debug=False, speak=True, use_maya=False):
     plan_steps = planner.plan(task)
     print(f"✅ Planned {len(plan_steps)} general steps to accomplish the goal.")
     
+    # Try to extract the current bundle id from dom_str
+    current_bundle_id = None
+    for line in dom_str.splitlines():
+        if ", " in line and line.count(".") > 1:  # crude check for bundle id
+            parts = line.split(", ")
+            if len(parts) == 2:
+                current_bundle_id = parts[1].strip()
+                break
+
+    app_context = get_app_context(current_bundle_id) if current_bundle_id else ""
+
     # Initialize state tracking
     current_state = {
         "evaluation_previous_goal": "Not started",
@@ -263,7 +274,10 @@ def run(task, debug=False, speak=True, use_maya=False):
     # No need to call announce_task_plan - we're sending the command directly to Maya
 
     for iteration in range(max_iterations):
-        prompt = format_prompt(dom_str, past_actions, plan_steps, task)
+        prompt = ""
+        if app_context:
+            prompt += f"### APP CONTEXT:\n{app_context}\n\n"
+        prompt += format_prompt(dom_str, past_actions, plan_steps, task)
         actions, new_state = get_actions_from_llm(prompt)
         
         # Update state information
@@ -362,6 +376,13 @@ def execute_command(command, use_narrator=True, use_maya=True):
             maya_agent.say("I wasn't able to complete the command fully. Zeus is awaiting further commands.")
     
     return is_complete, summary, actions_log
+
+def get_app_context(bundle_id):
+    context_path = os.path.join("context", bundle_id)
+    if os.path.exists(context_path):
+        with open(context_path, "r") as f:
+            return f.read().strip()
+    return ""
 
 if __name__ == "__main__":
     try:
