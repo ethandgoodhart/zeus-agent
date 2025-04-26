@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 from dotenv import load_dotenv; load_dotenv()
 import utils.__applist__ as __applist__
 import utils.executor as executor
