@@ -13,6 +13,8 @@ import time
 import re
 import claude_code  # Import the Claude Code module
 import threading
+import sys
+import signal
 
 executor = executor.Executor()
 print("\033[92mZeus - superagent running...\033[0m\n")
@@ -93,6 +95,23 @@ COMMON APP BUNDLE IDs:
 - Canary Mail: "io.canarymail.mac"
 - YouTube Music: "com.apple.Safari.WebApp.B08FDE55-585A-4141-916F-7F3C6DEA7B8C" (pause button means song is playing)
 """
+
+sigterm_handled = False
+
+def handle_sigterm(signum, frame):
+    global sigterm_handled
+    if sigterm_handled:
+        return
+    sigterm_handled = True
+    print("Received SIGTERM, shutting down gracefully...")
+    # Kill the whole process group
+    try:
+        os.killpg(os.getpgid(os.getpid()), signal.SIGKILL)
+    except Exception as e:
+        print(f"Error killing process group: {e}")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_sigterm)
 
 def format_prompt(dom_string, past_actions, plan_steps, task):
     prompt = dom_string + "\n"
@@ -393,14 +412,18 @@ if __name__ == "__main__":
             if not maya_agent.wait_for_initial_greeting(timeout=60):
                 print("⚠️ Continuing without waiting for Maya's initial greeting")
         
-        while True:
-            user_input = input("✈️ Enter command: "); print("---------------")
-
-
-            # Use the execute_command function which now handles Claude Code integration
+        if len(sys.argv) > 1:
+            # Command provided as argument
+            user_input = " ".join(sys.argv[1:])
+            print(f"✈️ Command from argument: {user_input}\n---------------")
             execute_command(user_input, use_narrator=False, use_maya=use_maya)
-            
             print("\n---------------")
+        else:
+            while True:
+                user_input = input("✈️ Enter command: "); print("---------------")
+                # Use the execute_command function which now handles Claude Code integration
+                execute_command(user_input, use_narrator=False, use_maya=use_maya)
+                print("\n---------------")
     except KeyboardInterrupt:
         print("\nShutting down...")
         # Stop Maya agent if it was started
