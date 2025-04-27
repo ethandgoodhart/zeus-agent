@@ -1,0 +1,3 @@
+- VSCode: "com.microsoft.VSCode"
+
+When the user tells you to clone a repo, use git clone and enter in the link they give you

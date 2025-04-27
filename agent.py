@@ -15,6 +15,7 @@ import claude_code  # Import the Claude Code module
 import threading
 import sys
 import signal
+from openai import OpenAI
 
 executor = executor.Executor()
 print("\033[92mZeus - superagent running...\033[0m\n")
@@ -169,22 +170,18 @@ if the goal is already completed, then based on the page respond only with:
     return prompt
 def get_actions_from_llm(prompt):
     api_key = os.environ.get("GEMINI_API_KEY")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    
-    request_body = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 1, "topK": 40, "topP": 0.95, "maxOutputTokens": 4192},
-        "systemInstruction": {
-            "parts": [
-                {"text": system_prompt}
-            ]
-        }
-    }
-    
-    response = requests.post(url, json=request_body)
-    data = response.json()
-    candidates = data.get("candidates", [])
-    text = candidates[0]["content"]["parts"][0]["text"] if candidates else ""
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+    response = client.chat.completions.create(
+        model="gemini-2.0-flash",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    text = response.choices[0].message.content
     
     # Clean response
     if "```json" in text:
